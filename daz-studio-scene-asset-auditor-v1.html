@@ -497,7 +497,7 @@
     <div class="header-inner">
       <div>
         <h1>DAZ Studio Scene Asset Auditor</h1>
-        <div>Drop in a DAZ scene file and generate a shareable asset report from your browser. Developed by <a href="https://www.daz3d.com/gallery/user/6277211032125440">Ascinct</a>.</div>
+        <div>Drop in a DAZ scene file and generate a shareable asset report from your browser. Developed by <a href="https://www.ascinct.com">Ascinct</a>.</div>
       </div>
       <button id="themeToggle" class="theme-toggle" type="button" aria-pressed="true">Dark mode</button>
     </div>
@@ -548,6 +548,22 @@
     function splitDsxMatchesBySpecificity(matches) { const usage = new Map(); matches.forEach(m => m.matchedPaths.forEach(p => usage.set(p, (usage.get(p) || 0) + 1))); const direct = [], possible = []; matches.forEach(m => { const unique = m.matchedPaths.filter(p => (usage.get(p) || 0) === 1); const shared = m.matchedPaths.filter(p => (usage.get(p) || 0) > 1); const e = { ...m, uniqueMatchedPaths: unique, sharedMatchedPaths: shared, uniqueMatchCount: unique.length, sharedMatchCount: shared.length }; (unique.length ? direct : possible).push(e); }); direct.sort((a, b) => b.uniqueMatchCount - a.uniqueMatchCount || b.matchedPaths.length - a.matchedPaths.length || a.productName.localeCompare(b.productName)); possible.sort((a, b) => b.sharedMatchCount - a.sharedMatchCount || a.productName.localeCompare(b.productName)); return { directMatches: direct, possibleMatches: possible }; }
     function isImageOrTextureFileName(name) { const p = String(name || '').toLowerCase().trim(); return /\.(jpg|jpeg|png|tif|tiff|bmp|exr|hdr)$/i.test(p) || /(^|[_\-\s])(basecolor|base_color|diffuse|albedo|normal|roughness|gloss|bump|opacity|alpha|metallic|specular|displacement|height)([_\-\s]|$)/i.test(p); }
     function buildReport(result) { const dsxGroups = splitDsxMatchesBySpecificity(result.dsxStatus.matches || []); const productRows = result.products.map(p => `<tr><td>${escapeHtml(p.vendor)}</td><td>${escapeHtml(p.product)}</td><td>${escapeHtml(p.confidence)}</td><td>${escapeHtml(p.sourceTypes.join(', '))}</td><td>${p.paths.length}</td></tr>`).join(''); const labelRows = result.sceneNodeLabels.map(i => `<tr><td>${escapeHtml(i.label)}</td><td>${escapeHtml(i.name)}</td><td>${escapeHtml(i.id)}</td><td>${escapeHtml(i.area)}</td></tr>`).join(''); const assetRows = result.assetPaths.map((p, i) => `<tr><td>${i + 1}</td><td><code>${escapeHtml(p)}</code></td></tr>`).join(''); const dsxRows = dsxGroups.directMatches.map((m, i) => { const id = `dsx-assets-${i}`; return `<tr><td><strong>${escapeHtml(m.productName)}</strong></td><td>${escapeHtml(m.productToken)}</td><td>${escapeHtml(m.artists.join(', '))}</td><td>${m.uniqueMatchCount}</td><td>${m.sharedMatchCount}</td><td><button class="asset-toggle-btn" data-target="${id}" aria-expanded="false">matched assets</button></td></tr><tr id="${id}" class="asset-detail-row"><td colspan="6" class="asset-detail-cell"><strong>Matched assets for ${escapeHtml(m.productName)}</strong><ul>${m.matchedPaths.map(p => `<li><code>${escapeHtml(p)}</code></li>`).join('')}</ul></td></tr>` }).join(''); const possibleRows = dsxGroups.possibleMatches.map((m, i) => { const id = `possible-assets-${i}`; return `<tr><td><strong>${escapeHtml(m.productName)}</strong></td><td>${escapeHtml(m.productToken)}</td><td>${escapeHtml(m.artists.join(', '))}</td><td>${m.sharedMatchCount}</td><td><button class="asset-toggle-btn" data-target="${id}" aria-expanded="false">matched assets</button></td></tr><tr id="${id}" class="asset-detail-row"><td colspan="5" class="asset-detail-cell"><strong>Matched assets for ${escapeHtml(m.productName)}</strong><ul>${m.sharedMatchedPaths.map(p => `<li><code>${escapeHtml(p)}</code></li>`).join('')}</ul></td></tr>` }).join(''); const dsxSummaryMessage = escapeHtml(result.dsxStatus.message.replace(/,?\s*\d+\s+product matches found\.?/i, '.')); const dsxSummaryClass = result.dsxStatus.enabled ? '' : ' class="text-warning"'; return `<section class="card"><div class="card-body"><h2>Summary</h2><p><strong>DSX exact matching:</strong> <span${dsxSummaryClass}>${dsxSummaryMessage}</span></p><p class="muted summary-line"><strong>${result.dsxStatus.matchedProducts || 0}</strong> product matches, <strong>${result.products.length}</strong> likely products, <strong>${result.sceneNodeLabels.length}</strong> scene node labels, <strong>${result.assetPaths.length}</strong> raw asset paths.</p><div class="output-toolbar"><button id="downloadHtml">Download HTML report</button><button id="downloadTitles">Export product titles</button></div></div></section><details class="accordion card" open><summary><span>Exact product matches</span><span class="summary-meta">${dsxGroups.directMatches.length} direct, ${dsxGroups.possibleMatches.length} possible</span><span>▾</span></summary><div class="accordion-body"><input class="filter" data-table="dsxTable" placeholder="Filter exact matches..."><table id="dsxTable" class="sortable-table"><thead><tr><th>Product</th><th>Token</th><th>Artists</th><th>Unique matched paths</th><th>Shared matched paths</th><th>Matched assets</th></tr></thead><tbody>${dsxRows || '<tr><td colspan="6" class="muted">No exact product matches found.</td></tr>'}</tbody></table><details class="sub-accordion"><summary><span>Possible match</span><span class="summary-meta">${dsxGroups.possibleMatches.length} found ▾</span></summary><div class="sub-accordion-body"><p class="muted">Products only matched shared/common assets.</p><table id="possibleTable" class="sortable-table"><thead><tr><th>Product</th><th>Token</th><th>Artists</th><th>Shared matched paths</th><th>Matched assets</th></tr></thead><tbody>${possibleRows || '<tr><td colspan="5" class="muted">No possible matches found.</td></tr>'}</tbody></table></div></details></div></details><details class="accordion card"><summary><span>Likely products</span><span class="summary-meta">${result.products.length} found</span><span>▾</span></summary><div class="accordion-body"><input class="filter" data-table="productTable" placeholder="Filter products..."><table id="productTable" class="sortable-table"><thead><tr><th>Vendor</th><th>Product / asset folder</th><th>Confidence</th><th>Source</th><th>Paths</th></tr></thead><tbody>${productRows}</tbody></table></div></details><details class="accordion card"><summary><span>Scene node labels</span><span class="summary-meta">${result.sceneNodeLabels.length} found</span><span>▾</span></summary><div class="accordion-body"><input class="filter" data-table="labelTable" placeholder="Filter node labels..."><table id="labelTable" class="sortable-table"><thead><tr><th>Label</th><th>Name</th><th>ID</th><th>Area</th></tr></thead><tbody>${labelRows}</tbody></table></div></details><details class="accordion card"><summary><span>Raw asset paths</span><span class="summary-meta">${result.assetPaths.length} found</span><span>▾</span></summary><div class="accordion-body"><input class="filter" data-table="assetTable" placeholder="Filter raw paths..."><table id="assetTable" class="sortable-table"><thead><tr><th>#</th><th>Raw asset path</th></tr></thead><tbody>${assetRows}</tbody></table></div></details>`; }
+    function getSceneTitleFromFileName(fileName) {
+      return String(fileName || 'daz-scene')
+        .replace(/\.duf\.gz$/i, '')
+        .replace(/\.duf$/i, '')
+        .replace(/\.gz$/i, '')
+        .trim() || 'daz-scene';
+    }
+    function sanitiseDownloadFileName(value) {
+      return String(value || 'daz-scene')
+        .replace(/[\\/:*?"<>|]+/g, '-')
+        .replace(/\s+/g, ' ')
+        .trim() || 'daz-scene';
+    }
+    function getSceneDownloadBaseName(result) {
+      return sanitiseDownloadFileName(getSceneTitleFromFileName(result?.inputFile));
+    }
     function makeTextTitles(result) {
       const groups = splitDsxMatchesBySpecificity(result.dsxStatus.matches || []);
       const exactTitles = groups.directMatches.map(m => m.productName).filter(Boolean).sort((a, b) => a.localeCompare(b));
@@ -771,7 +787,35 @@
       });
     }
 
-    function wireReport() { wireTableSorting(); document.querySelectorAll('.asset-toggle-btn').forEach(btn => btn.addEventListener('click', () => { const row = document.getElementById(btn.dataset.target); const open = !row.classList.contains('is-open'); row.classList.toggle('is-open', open); btn.setAttribute('aria-expanded', String(open)); })); document.querySelectorAll('.filter').forEach(input => input.addEventListener('input', () => { const table = document.getElementById(input.dataset.table); const q = input.value.toLowerCase(); table.querySelectorAll('tbody tr').forEach(row => { if (row.classList.contains('asset-detail-row')) return; row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none'; }); })); $('#downloadTitles')?.addEventListener('click', () => download('exact-product-matches.txt', makeTextTitles(currentResult))); $('#downloadHtml')?.addEventListener('click', () => download('daz-scene-asset-report.html', '<!doctype html>\n<html><head><meta charset="utf-8"><title>DAZ Scene Asset Report</title>' + document.querySelector('style').outerHTML + '</head><body data-theme="' + document.body.dataset.theme + '"><main>' + $('#report').innerHTML + '</main></body></html>', 'text/html')); }
+    function buildStandaloneReportHtml() {
+      const reportScripts = `<script>
+        document.addEventListener('DOMContentLoaded', function () {
+          document.querySelectorAll('.asset-toggle-btn').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+              const row = document.getElementById(btn.dataset.target);
+              if (!row) return;
+              const open = !row.classList.contains('is-open');
+              row.classList.toggle('is-open', open);
+              btn.setAttribute('aria-expanded', String(open));
+            });
+          });
+          document.querySelectorAll('.filter').forEach(function (input) {
+            input.addEventListener('input', function () {
+              const table = document.getElementById(input.dataset.table);
+              if (!table) return;
+              const q = input.value.toLowerCase();
+              table.querySelectorAll('tbody tr').forEach(function (row) {
+                if (row.classList.contains('asset-detail-row')) return;
+                row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+              });
+            });
+          });
+        });
+      <\/script>`;
+      return '<!doctype html>\n<html><head><meta charset="utf-8"><title>DAZ Scene Asset Report</title>' + document.querySelector('style').outerHTML + '</head><body data-theme="' + document.body.dataset.theme + '"><main>' + $('#report').innerHTML + '</main>' + reportScripts + '</body></html>';
+    }
+
+    function wireReport() { wireTableSorting(); document.querySelectorAll('.asset-toggle-btn').forEach(btn => btn.addEventListener('click', () => { const row = document.getElementById(btn.dataset.target); const open = !row.classList.contains('is-open'); row.classList.toggle('is-open', open); btn.setAttribute('aria-expanded', String(open)); })); document.querySelectorAll('.filter').forEach(input => input.addEventListener('input', () => { const table = document.getElementById(input.dataset.table); const q = input.value.toLowerCase(); table.querySelectorAll('tbody tr').forEach(row => { if (row.classList.contains('asset-detail-row')) return; row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none'; }); })); $('#downloadTitles')?.addEventListener('click', () => { const baseName = getSceneDownloadBaseName(currentResult); download(`${baseName}-product-titles.txt`, makeTextTitles(currentResult)); }); $('#downloadHtml')?.addEventListener('click', () => { const baseName = getSceneDownloadBaseName(currentResult); download(`${baseName}-asset-report.html`, buildStandaloneReportHtml(), 'text/html'); }); }
     initialiseThemeToggle();
     wireSelectionPanels();
     wireSceneFileDropZone();
