@@ -224,7 +224,7 @@
       cursor: pointer;
     }
 
-    #sceneFilePanel.scene-drop-active {
+    .field.scene-drop-active {
       background: var(--scene-drop-bg);
       border-color: var(--accent);
       box-shadow: 0 0 0 4px rgba(116, 185, 255, .16);
@@ -489,6 +489,83 @@
       color: var(--warning-text);
       margin: 16px 0;
     }
+
+    .dsx-folder-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    .dsx-folder-actions button {
+      padding: 8px 12px;
+      font-size: 13px;
+    }
+
+    .dsx-folder-list {
+      list-style: none;
+      margin: 12px 0 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .dsx-folder-item {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--panel-2);
+    }
+
+    .dsx-folder-item.is-pending {
+      border-style: dashed;
+      background: var(--field-needed-bg);
+      border-color: var(--field-needed-border);
+    }
+
+    .dsx-folder-name {
+      font-weight: 700;
+      word-break: break-all;
+    }
+
+    .dsx-folder-meta {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .dsx-folder-remove,
+    .dsx-folder-reselect {
+      border: 1px solid var(--border);
+      background: var(--panel);
+      color: var(--text);
+      border-radius: 6px;
+      padding: 4px 10px;
+      cursor: pointer;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
+    .dsx-folder-remove:hover,
+    .dsx-folder-reselect:hover {
+      border-color: var(--accent);
+    }
+
+    .dsx-empty {
+      color: var(--muted);
+      font-size: 13px;
+      font-style: italic;
+      margin-top: 10px;
+    }
+
+    .input-hidden {
+      display: none !important;
+    }
   </style>
 </head>
 
@@ -514,12 +591,20 @@
             <p class="muted small">Drop your .duf file here or choose a file from Windows Explorer</p>
             <input id="dufFile" type="file" accept=".duf,.duf.gz,.gz">
           </div>
-          <div class="field selection-needed" id="dsxFolderPanel"><label for="dsxFolder">Optional DSX support
-              folder</label>
-            <p class="muted small">Choose the folder that contains DAZ <code>.dsx</code> support files, often
-              <code>Runtime/Support</code>.</p>
-              <input id="dsxFolder" type="file" webkitdirectory directory multiple>
-            <p id="dsxLastFolderHint" class="muted remembered-folder hidden"></p>
+          <div class="field selection-needed" id="dsxFolderPanel">
+            <label>Optional DSX support folders</label>
+            <p class="muted small">Drop one or more folders here, or click <strong>Add folder</strong>. Each folder should contain DAZ <code>.dsx</code> support files (often <code>Runtime/Support</code>). Multiple folders can be loaded at once.</p>
+            <div class="dsx-folder-actions">
+              <button type="button" id="dsxAddFolderBtn">Add folder...</button>
+              <button type="button" id="dsxRestoreBtn" class="hidden">Restore previous folders</button>
+              <button type="button" id="dsxExportBtn" class="hidden">Save folder list...</button>
+              <button type="button" id="dsxImportBtn">Load folder list...</button>
+              <button type="button" id="dsxClearBtn" class="hidden">Clear all</button>
+            </div>
+            <ul id="dsxFolderList" class="dsx-folder-list"></ul>
+            <p id="dsxEmptyHint" class="dsx-empty">No support folders loaded yet.</p>
+            <input id="dsxFolder" type="file" webkitdirectory directory multiple class="input-hidden">
+            <input id="dsxImportInput" type="file" accept=".json,application/json" class="input-hidden">
           </div>
         </div>
         <div class="actions"><button id="runBtn" class="primary">Generate report</button><button
@@ -605,55 +690,230 @@
     }
 
     let currentResult = null;
-    const DSX_LAST_FOLDER_KEY = 'dazSceneAssetExtractor.lastDsxSupportFolder';
 
-    function getFolderNameFromSelection(input) {
-      const files = input?.files ? Array.from(input.files) : [];
-      if (!files.length) return '';
-      const firstPath = files[0].webkitRelativePath || files[0].name || '';
-      if (firstPath.includes('/')) return firstPath.split('/')[0];
-      return files.length === 1 ? files[0].name : 'Selected support folder';
+    // === Multi-folder DSX support ===
+    // loadedFolders entry: { id, name, files: File[], dsxCount, handle?, pending? }
+    const loadedFolders = [];
+    let dsxFolderRestoreCandidates = [];
+    let dsxFolderIdSeq = 0;
+    const makeFolderId = () => `dsx-folder-${++dsxFolderIdSeq}`;
+    const fsAccessSupported = typeof window.showDirectoryPicker === 'function';
+
+    const DSX_LOADED_NAMES_KEY = 'dazSceneAssetExtractor.loadedFolderNames';
+    const DSX_DB_NAME = 'dazSceneAssetExtractor';
+    const DSX_DB_STORE = 'folderHandles';
+
+    // ----- IndexedDB wrappers (persist FileSystemDirectoryHandle on Chromium) -----
+    function openDsxDb() {
+      return new Promise((resolve, reject) => {
+        if (!('indexedDB' in window)) return reject(new Error('IndexedDB unavailable'));
+        const req = indexedDB.open(DSX_DB_NAME, 1);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains(DSX_DB_STORE)) db.createObjectStore(DSX_DB_STORE, { keyPath: 'name' });
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
     }
-    function setDsxLastFolderHint(text, mode = 'last') {
-      const hint = document.getElementById('dsxLastFolderHint');
-      if (!hint) return;
-      if (!text) {
-        hint.classList.add('hidden');
-        hint.textContent = '';
-        return;
-      }
-      if (mode === 'selected') {
-        hint.innerHTML = `<strong>Selected folder:</strong> ${escapeHtml(text)}`;
-      } else {
-        hint.innerHTML = `<strong>Last used:</strong> ${escapeHtml(text)}<br><span class="muted">Click &quot;Browse&quot; to reselect the last used support folder.</span>`;
-      }
-      hint.classList.remove('hidden');
-    }
-    function loadRememberedDsxFolderHint() {
+    async function idbPutFolder(name, handle) {
       try {
-        const remembered = localStorage.getItem(DSX_LAST_FOLDER_KEY);
-        if (remembered) setDsxLastFolderHint(remembered, 'last');
+        const db = await openDsxDb();
+        await new Promise((res, rej) => {
+          const tx = db.transaction(DSX_DB_STORE, 'readwrite');
+          tx.objectStore(DSX_DB_STORE).put({ name, handle });
+          tx.oncomplete = res;
+          tx.onerror = () => rej(tx.error);
+        });
       } catch { }
     }
-    function rememberDsxFolderSelection() {
-      const input = document.getElementById('dsxFolder');
-      const folderName = getFolderNameFromSelection(input);
-      if (!folderName) return;
-      try { localStorage.setItem(DSX_LAST_FOLDER_KEY, folderName); } catch { }
-      setDsxLastFolderHint(folderName, 'selected');
+    async function idbDeleteFolder(name) {
+      try {
+        const db = await openDsxDb();
+        await new Promise((res, rej) => {
+          const tx = db.transaction(DSX_DB_STORE, 'readwrite');
+          tx.objectStore(DSX_DB_STORE).delete(name);
+          tx.oncomplete = res;
+          tx.onerror = () => rej(tx.error);
+        });
+      } catch { }
+    }
+    async function idbGetAllFolders() {
+      try {
+        const db = await openDsxDb();
+        return await new Promise((res, rej) => {
+          const tx = db.transaction(DSX_DB_STORE, 'readonly');
+          const req = tx.objectStore(DSX_DB_STORE).getAll();
+          req.onsuccess = () => res(req.result || []);
+          req.onerror = () => rej(req.error);
+        });
+      } catch { return []; }
+    }
+    async function idbClearFolders() {
+      try {
+        const db = await openDsxDb();
+        await new Promise((res, rej) => {
+          const tx = db.transaction(DSX_DB_STORE, 'readwrite');
+          tx.objectStore(DSX_DB_STORE).clear();
+          tx.oncomplete = res;
+          tx.onerror = () => rej(tx.error);
+        });
+      } catch { }
     }
 
-    function updateSelectionPanel(inputId, panelId) {
-      const input = document.getElementById(inputId);
-      const panel = document.getElementById(panelId);
-      if (!input || !panel) return;
-      const hasSelection = input.files && input.files.length > 0;
-      panel.classList.toggle('selection-made', hasSelection);
-      panel.classList.toggle('selection-needed', !hasSelection);
-      if (hasSelection) {
-        panel.classList.remove('selection-warning', 'selection-warning-pulse');
-        if (inputId === 'dsxFolder') rememberDsxFolderSelection();
+    // ----- localStorage list of folder names (for cross-browser hint/rehydration) -----
+    function saveLoadedFolderNames() {
+      try {
+        const meta = loadedFolders.filter(f => !f.pending).map(f => ({ name: f.name, dsxCount: f.dsxCount }));
+        localStorage.setItem(DSX_LOADED_NAMES_KEY, JSON.stringify(meta));
+      } catch { }
+    }
+    function readSavedFolderNames() {
+      try {
+        const raw = localStorage.getItem(DSX_LOADED_NAMES_KEY);
+        if (!raw) return [];
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed.filter(e => e && typeof e.name === 'string') : [];
+      } catch { return []; }
+    }
+
+    // ----- File / directory walking -----
+    const isDsxFile = name => /\.dsx$/i.test(String(name || ''));
+    function defineRelativePath(file, path) {
+      try { Object.defineProperty(file, 'webkitRelativePath', { value: path, configurable: true }); } catch { }
+      return file;
+    }
+    async function walkDataTransferEntry(entry, parentPath = '') {
+      const out = [];
+      if (!entry) return out;
+      const myPath = parentPath ? `${parentPath}/${entry.name}` : entry.name;
+      if (entry.isFile) {
+        if (!isDsxFile(entry.name)) return out;
+        const file = await new Promise((res, rej) => entry.file(res, rej));
+        out.push(defineRelativePath(file, myPath));
+      } else if (entry.isDirectory) {
+        const reader = entry.createReader();
+        const readBatch = () => new Promise((res, rej) => reader.readEntries(res, rej));
+        let batch;
+        do {
+          batch = await readBatch();
+          for (const child of batch) {
+            const more = await walkDataTransferEntry(child, myPath);
+            for (const f of more) out.push(f);
+          }
+        } while (batch && batch.length > 0);
       }
+      return out;
+    }
+    async function walkDirectoryHandle(dirHandle, parentPath = '') {
+      const out = [];
+      const myPath = parentPath ? `${parentPath}/${dirHandle.name}` : dirHandle.name;
+      for await (const entry of dirHandle.values()) {
+        if (entry.kind === 'file') {
+          if (!isDsxFile(entry.name)) continue;
+          const file = await entry.getFile();
+          out.push(defineRelativePath(file, `${myPath}/${entry.name}`));
+        } else if (entry.kind === 'directory') {
+          const more = await walkDirectoryHandle(entry, myPath);
+          for (const f of more) out.push(f);
+        }
+      }
+      return out;
+    }
+    async function ensureHandlePermission(handle) {
+      try {
+        const opts = { mode: 'read' };
+        if ((await handle.queryPermission(opts)) === 'granted') return true;
+        return (await handle.requestPermission(opts)) === 'granted';
+      } catch { return false; }
+    }
+
+    // ----- Folder state management -----
+    function getFolderRootName(file) {
+      const path = file.webkitRelativePath || file.name || '';
+      if (path.includes('/')) return path.split('/')[0];
+      return file.name || 'Selected folder';
+    }
+    function getAllDsxFiles() { return loadedFolders.flatMap(f => f.files || []); }
+    function findFolderByName(name) {
+      const lower = String(name || '').toLowerCase();
+      return loadedFolders.find(f => f.name.toLowerCase() === lower);
+    }
+    function upsertFolder({ name, files, handle }) {
+      const dsxFiles = (files || []).filter(f => isDsxFile(f.name));
+      const existing = findFolderByName(name);
+      const entry = existing || { id: makeFolderId(), name };
+      entry.files = dsxFiles;
+      entry.dsxCount = dsxFiles.length;
+      entry.pending = false;
+      if (handle) entry.handle = handle;
+      if (!existing) loadedFolders.push(entry);
+      return entry;
+    }
+    function addPendingFolder(name) {
+      if (!name || findFolderByName(name)) return null;
+      const entry = { id: makeFolderId(), name, files: [], dsxCount: 0, pending: true };
+      loadedFolders.push(entry);
+      return entry;
+    }
+    async function removeFolder(id) {
+      const idx = loadedFolders.findIndex(f => f.id === id);
+      if (idx < 0) return;
+      const [removed] = loadedFolders.splice(idx, 1);
+      if (removed?.handle) await idbDeleteFolder(removed.name);
+      saveLoadedFolderNames();
+      renderDsxFolderList();
+      await refreshRestoreButton();
+    }
+    async function clearAllFolders({ alsoIdb = true } = {}) {
+      loadedFolders.length = 0;
+      if (alsoIdb) await idbClearFolders();
+      saveLoadedFolderNames();
+      renderDsxFolderList();
+      await refreshRestoreButton();
+    }
+
+    // ----- Rendering -----
+    function renderDsxFolderList() {
+      const list = document.getElementById('dsxFolderList');
+      const emptyHint = document.getElementById('dsxEmptyHint');
+      const clearBtnEl = document.getElementById('dsxClearBtn');
+      const exportBtnEl = document.getElementById('dsxExportBtn');
+      if (!list) return;
+      list.innerHTML = '';
+      const hasAny = loadedFolders.length > 0;
+      const hasReady = loadedFolders.some(f => !f.pending);
+      emptyHint?.classList.toggle('hidden', hasAny);
+      clearBtnEl?.classList.toggle('hidden', !hasAny);
+      exportBtnEl?.classList.toggle('hidden', !hasReady);
+      for (const f of loadedFolders) {
+        const li = document.createElement('li');
+        li.className = 'dsx-folder-item' + (f.pending ? ' is-pending' : '');
+        const meta = f.pending
+          ? 'Saved name only — click Reselect to grant access.'
+          : `${f.dsxCount.toLocaleString()} .dsx files${f.handle ? ' · saved for next visit' : ''}`;
+        const reselect = f.pending
+          ? `<button type="button" class="dsx-folder-reselect" data-id="${f.id}">Reselect</button>`
+          : '<span></span>';
+        li.innerHTML = `
+          <div>
+            <div class="dsx-folder-name">${escapeHtml(f.name)}</div>
+            <div class="dsx-folder-meta">${escapeHtml(meta)}</div>
+          </div>
+          ${reselect}
+          <button type="button" class="dsx-folder-remove" data-id="${f.id}" title="Remove">✕</button>
+        `;
+        list.appendChild(li);
+      }
+      updateDsxPanelState();
+    }
+    function updateDsxPanelState() {
+      const panel = document.getElementById('dsxFolderPanel');
+      if (!panel) return;
+      const hasReady = loadedFolders.some(f => !f.pending);
+      panel.classList.toggle('selection-made', hasReady);
+      panel.classList.toggle('selection-needed', !hasReady);
+      if (hasReady) panel.classList.remove('selection-warning', 'selection-warning-pulse');
     }
     function drawAttentionToPanel(panel) {
       if (!panel) return;
@@ -662,22 +922,240 @@
       panel.classList.add('selection-warning-pulse');
     }
     function markDsxPanelIfMissing() {
-      const dsxInput = document.getElementById('dsxFolder');
-      const dsxPanel = document.getElementById('dsxFolderPanel');
-      if (!dsxInput || !dsxPanel) return;
-      const hasDsxSelection = dsxInput.files && dsxInput.files.length > 0;
-      if (!hasDsxSelection) {
-        dsxPanel.classList.remove('selection-made');
-        dsxPanel.classList.add('selection-warning');
-        drawAttentionToPanel(dsxPanel);
+      const panel = document.getElementById('dsxFolderPanel');
+      if (!panel) return;
+      const hasReady = loadedFolders.some(f => !f.pending);
+      if (!hasReady) {
+        panel.classList.remove('selection-made');
+        panel.classList.add('selection-warning');
+        drawAttentionToPanel(panel);
       }
     }
+    function updateSelectionPanel(inputId, panelId) {
+      const input = document.getElementById(inputId);
+      const panel = document.getElementById(panelId);
+      if (!input || !panel) return;
+      const hasSelection = input.files && input.files.length > 0;
+      panel.classList.toggle('selection-made', hasSelection);
+      panel.classList.toggle('selection-needed', !hasSelection);
+      if (hasSelection) panel.classList.remove('selection-warning', 'selection-warning-pulse');
+    }
     function wireSelectionPanels() {
-      [['dufFile', 'sceneFilePanel'], ['dsxFolder', 'dsxFolderPanel']].forEach(([inputId, panelId]) => {
-        const input = document.getElementById(inputId);
-        if (!input) return;
-        input.addEventListener('change', () => updateSelectionPanel(inputId, panelId));
-        updateSelectionPanel(inputId, panelId);
+      const input = document.getElementById('dufFile');
+      if (!input) return;
+      input.addEventListener('change', () => updateSelectionPanel('dufFile', 'sceneFilePanel'));
+      updateSelectionPanel('dufFile', 'sceneFilePanel');
+    }
+
+    // ----- Adding folders (FS Access API, hidden input, drag-and-drop) -----
+    async function addFolderViaFsAccess() {
+      if (!fsAccessSupported) return false;
+      let handle;
+      try {
+        handle = await window.showDirectoryPicker({ id: 'dazDsxSupport', mode: 'read' });
+      } catch (e) {
+        if (e?.name === 'AbortError') return true; // user cancelled — don't fall back
+        return false;
+      }
+      $('#status').textContent = `Reading "${handle.name}"...`;
+      const files = await walkDirectoryHandle(handle);
+      const entry = upsertFolder({ name: handle.name, files, handle });
+      await idbPutFolder(entry.name, handle);
+      saveLoadedFolderNames();
+      renderDsxFolderList();
+      await refreshRestoreButton();
+      $('#status').textContent = `Added "${entry.name}" (${entry.dsxCount.toLocaleString()} .dsx files).`;
+      return true;
+    }
+    function addFoldersFromFileList(fileList) {
+      if (!fileList || !fileList.length) return;
+      const byRoot = new Map();
+      for (const file of fileList) {
+        if (!isDsxFile(file.name)) continue;
+        const root = getFolderRootName(file);
+        if (!byRoot.has(root)) byRoot.set(root, []);
+        byRoot.get(root).push(file);
+      }
+      if (!byRoot.size) {
+        const sample = fileList[0];
+        if (sample) {
+          const root = getFolderRootName(sample);
+          upsertFolder({ name: root, files: [] });
+        }
+      } else {
+        for (const [root, files] of byRoot) upsertFolder({ name: root, files });
+      }
+      saveLoadedFolderNames();
+      renderDsxFolderList();
+      const summary = [...byRoot.entries()].map(([n, f]) => `${n} (${f.length})`).join(', ');
+      $('#status').textContent = byRoot.size ? `Added folders: ${summary}.` : 'No .dsx files found in selection.';
+    }
+    async function addFoldersFromDataTransfer(dataTransfer) {
+      const items = dataTransfer?.items;
+      if (!items || !items.length) {
+        $('#status').textContent = 'Drop a folder, not just files.';
+        return;
+      }
+      const entries = [];
+      for (const item of items) {
+        const entry = item.webkitGetAsEntry?.();
+        if (entry) entries.push(entry);
+      }
+      const directoryEntries = entries.filter(e => e.isDirectory);
+      if (!directoryEntries.length) {
+        $('#status').textContent = 'Drop one or more folders (not loose files).';
+        return;
+      }
+      let added = 0;
+      for (const entry of directoryEntries) {
+        $('#status').textContent = `Reading "${entry.name}"...`;
+        const files = await walkDataTransferEntry(entry);
+        upsertFolder({ name: entry.name, files });
+        added++;
+      }
+      saveLoadedFolderNames();
+      renderDsxFolderList();
+      $('#status').textContent = `Loaded ${added} folder${added === 1 ? '' : 's'}.`;
+    }
+
+    // ----- Restore from IndexedDB (FS Access API browsers) -----
+    async function refreshRestoreButton() {
+      const btn = document.getElementById('dsxRestoreBtn');
+      if (!btn) return;
+      if (!fsAccessSupported) { btn.classList.add('hidden'); return; }
+      const saved = await idbGetAllFolders();
+      dsxFolderRestoreCandidates = saved.filter(s => {
+        if (!s.handle) return false;
+        const existing = findFolderByName(s.name);
+        // Allow restoring over pending placeholders, but not over already-loaded folders.
+        return !existing || existing.pending;
+      });
+      if (dsxFolderRestoreCandidates.length) {
+        btn.textContent = `Restore ${dsxFolderRestoreCandidates.length} previous folder${dsxFolderRestoreCandidates.length === 1 ? '' : 's'}`;
+        btn.classList.remove('hidden');
+      } else {
+        btn.classList.add('hidden');
+      }
+    }
+    async function restoreSavedFolders() {
+      for (const { name, handle } of dsxFolderRestoreCandidates) {
+        $('#status').textContent = `Restoring "${name}"...`;
+        const granted = await ensureHandlePermission(handle);
+        if (!granted) { $('#status').textContent = `Permission denied for "${name}".`; continue; }
+        const files = await walkDirectoryHandle(handle);
+        const existing = findFolderByName(name);
+        if (existing && existing.pending) {
+          // Replace pending placeholder with real entry
+          existing.files = files.filter(f => isDsxFile(f.name));
+          existing.dsxCount = existing.files.length;
+          existing.handle = handle;
+          existing.pending = false;
+        } else {
+          upsertFolder({ name, files, handle });
+        }
+        renderDsxFolderList();
+      }
+      saveLoadedFolderNames();
+      await refreshRestoreButton();
+      $('#status').textContent = 'Folders restored.';
+    }
+
+    // ----- JSON export / import of folder list -----
+    function exportFoldersJson() {
+      const payload = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        folders: loadedFolders.filter(f => !f.pending).map(f => ({ name: f.name, dsxCount: f.dsxCount })),
+      };
+      const dt = new Date().toISOString().slice(0, 10);
+      download(`daz-dsx-folder-list-${dt}.json`, JSON.stringify(payload, null, 2), 'application/json');
+    }
+    async function importFoldersJsonFromFile(file) {
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        const folders = Array.isArray(data?.folders) ? data.folders : [];
+        let added = 0;
+        for (const f of folders) {
+          if (!f || typeof f.name !== 'string') continue;
+          if (addPendingFolder(f.name)) added++;
+        }
+        renderDsxFolderList();
+        $('#status').textContent = added
+          ? `Loaded ${added} folder name${added === 1 ? '' : 's'} from JSON. Click "Reselect" on each to grant access.`
+          : 'No new folders to load from JSON.';
+      } catch (e) {
+        $('#status').textContent = 'Could not parse folder list JSON: ' + e.message;
+      }
+    }
+
+    // ----- DSX panel wiring (drop zone + buttons) -----
+    function rehydratePendingFromLocalStorage() {
+      if (loadedFolders.length) return;
+      const saved = readSavedFolderNames();
+      for (const e of saved) addPendingFolder(e.name);
+    }
+    function wireDsxFolderPanel() {
+      const panel = document.getElementById('dsxFolderPanel');
+      const hiddenInput = document.getElementById('dsxFolder');
+      const importInput = document.getElementById('dsxImportInput');
+      const list = document.getElementById('dsxFolderList');
+      if (!panel) return;
+
+      ['dragenter', 'dragover'].forEach(name => {
+        panel.addEventListener(name, e => {
+          if (!e.dataTransfer?.types?.includes('Files')) return;
+          e.preventDefault();
+          e.stopPropagation();
+          panel.classList.add('scene-drop-active');
+        });
+      });
+      ['dragleave', 'dragend'].forEach(name => {
+        panel.addEventListener(name, e => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!panel.contains(e.relatedTarget)) panel.classList.remove('scene-drop-active');
+        });
+      });
+      panel.addEventListener('drop', async e => {
+        e.preventDefault();
+        e.stopPropagation();
+        panel.classList.remove('scene-drop-active');
+        await addFoldersFromDataTransfer(e.dataTransfer);
+      });
+
+      document.getElementById('dsxAddFolderBtn')?.addEventListener('click', async () => {
+        if (fsAccessSupported) {
+          const ok = await addFolderViaFsAccess();
+          if (ok) return;
+        }
+        hiddenInput?.click();
+      });
+      hiddenInput?.addEventListener('change', () => {
+        addFoldersFromFileList(hiddenInput.files);
+        hiddenInput.value = '';
+      });
+      document.getElementById('dsxClearBtn')?.addEventListener('click', async () => {
+        await clearAllFolders({ alsoIdb: true });
+        $('#status').textContent = 'Cleared all support folders.';
+      });
+      document.getElementById('dsxExportBtn')?.addEventListener('click', exportFoldersJson);
+      document.getElementById('dsxImportBtn')?.addEventListener('click', () => importInput?.click());
+      importInput?.addEventListener('change', async () => {
+        await importFoldersJsonFromFile(importInput.files?.[0]);
+        importInput.value = '';
+      });
+      document.getElementById('dsxRestoreBtn')?.addEventListener('click', restoreSavedFolders);
+
+      list?.addEventListener('click', async e => {
+        const removeBtn = e.target.closest('.dsx-folder-remove');
+        if (removeBtn) { await removeFolder(removeBtn.dataset.id); return; }
+        const reselectBtn = e.target.closest('.dsx-folder-reselect');
+        if (reselectBtn) {
+          if (fsAccessSupported) await addFolderViaFsAccess();
+          else hiddenInput?.click();
+        }
       });
     }
 
@@ -736,8 +1214,21 @@
       });
     }
 
-    $('#runBtn').addEventListener('click', async () => { try { const file = $('#dufFile').files[0]; if (!file) { $('#status').textContent = 'Please select a .duf scene file first.'; return } markDsxPanelIfMissing(); $('#runBtn').disabled = true; $('#status').textContent = 'Reading scene file...'; const text = await readSceneText(file); let json = {}; try { json = JSON.parse(text) } catch { } const assetPaths = extractQuotedPaths(text); const products = extractLikelyProducts(assetPaths); const sceneNodeLabels = extractSceneNodeLabels(json); const dsxStatus = await matchDsxFiles(assetPaths, $('#dsxFolder').files || []); currentResult = { inputFile: file.name, assetPaths, products, sceneNodeLabels, dsxStatus }; $('#report').innerHTML = buildReport(currentResult); $('#report').classList.remove('hidden'); $('#status').textContent = 'Report generated.'; wireReport(); } catch (err) { $('#status').textContent = 'Error: ' + err.message; } finally { $('#runBtn').disabled = false; } });
-    $('#clearBtn').addEventListener('click', () => { $('#dufFile').value = ''; $('#dsxFolder').value = ''; $('#report').innerHTML = ''; $('#report').classList.add('hidden'); $('#status').textContent = 'Ready.'; currentResult = null; document.getElementById('dsxFolderPanel')?.classList.remove('selection-warning', 'selection-warning-pulse'); wireSelectionPanels(); loadRememberedDsxFolderHint(); });
+    $('#runBtn').addEventListener('click', async () => { try { const file = $('#dufFile').files[0]; if (!file) { $('#status').textContent = 'Please select a .duf scene file first.'; return } markDsxPanelIfMissing(); $('#runBtn').disabled = true; $('#status').textContent = 'Reading scene file...'; const text = await readSceneText(file); let json = {}; try { json = JSON.parse(text) } catch { } const assetPaths = extractQuotedPaths(text); const products = extractLikelyProducts(assetPaths); const sceneNodeLabels = extractSceneNodeLabels(json); const dsxStatus = await matchDsxFiles(assetPaths, getAllDsxFiles()); currentResult = { inputFile: file.name, assetPaths, products, sceneNodeLabels, dsxStatus }; $('#report').innerHTML = buildReport(currentResult); $('#report').classList.remove('hidden'); $('#status').textContent = 'Report generated.'; wireReport(); } catch (err) { $('#status').textContent = 'Error: ' + err.message; } finally { $('#runBtn').disabled = false; } });
+    $('#clearBtn').addEventListener('click', async () => {
+      $('#dufFile').value = '';
+      $('#report').innerHTML = '';
+      $('#report').classList.add('hidden');
+      $('#status').textContent = 'Ready.';
+      currentResult = null;
+      // Clear loaded folders for the current session, but leave IndexedDB intact
+      // so saved handles can still be restored on next visit.
+      await clearAllFolders({ alsoIdb: false });
+      wireSelectionPanels();
+      rehydratePendingFromLocalStorage();
+      renderDsxFolderList();
+      await refreshRestoreButton();
+    });
 
     function getCellSortValue(row, index) {
       const cell = row.children[index];
@@ -819,7 +1310,10 @@
     initialiseThemeToggle();
     wireSelectionPanels();
     wireSceneFileDropZone();
-    loadRememberedDsxFolderHint();
+    wireDsxFolderPanel();
+    rehydratePendingFromLocalStorage();
+    renderDsxFolderList();
+    refreshRestoreButton();
   </script>
 </body>
 
