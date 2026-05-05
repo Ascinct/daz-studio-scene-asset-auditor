@@ -353,6 +353,10 @@
       background: var(--panel);
     }
 
+    .sub-accordion-body .muted {
+      padding-top: 20px;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
@@ -408,6 +412,11 @@
       display: table-row;
     }
 
+    .asset-detail-heading {
+      font-size: 15px;
+      font-weight: 400;
+    }
+
     .asset-detail-cell {
       background: var(--asset-detail-bg);
     }
@@ -421,6 +430,23 @@
       break-inside: avoid;
       margin-bottom: 4px;
       padding-right: 10px;
+    }
+
+    .asset-detail-cell li.shared-asset code {
+      color: var(--warning-text);
+      font-weight: 700;
+    }
+
+    .asset-detail-cell li.common-base-asset code {
+      color: var(--muted);
+      opacity: .78;
+    }
+
+    .ignored-match-note {
+      margin-top: 10px;
+      color: var(--muted);
+      font-size: 13px;
+      display: none;
     }
 
     @media(max-width:768px) {
@@ -497,7 +523,8 @@
     <div class="header-inner">
       <div>
         <h1>DAZ Studio Scene Asset Auditor</h1>
-        <div>Drop in a DAZ scene file and generate a shareable asset report from your browser. Developed by <a href="https://www.ascinct.com">Ascinct</a>.</div>
+        <div>Drop in a DAZ scene file and generate a shareable asset report from your browser. Developed by <a
+            href="https://www.ascinct.com">Ascinct</a>.</div>
       </div>
       <button id="themeToggle" class="theme-toggle" type="button" aria-pressed="true">Dark mode</button>
     </div>
@@ -517,8 +544,9 @@
           <div class="field selection-needed" id="dsxFolderPanel"><label for="dsxFolder">Optional DSX support
               folder</label>
             <p class="muted small">Choose the folder that contains DAZ <code>.dsx</code> support files, often
-              <code>Runtime/Support</code>.</p>
-              <input id="dsxFolder" type="file" webkitdirectory directory multiple>
+              <code>Runtime/Support</code>.
+            </p>
+            <input id="dsxFolder" type="file" webkitdirectory directory multiple>
             <p id="dsxLastFolderHint" class="muted remembered-folder hidden"></p>
           </div>
         </div>
@@ -542,12 +570,112 @@
     function extractLikelyProducts(paths) { const map = new Map(); for (const p of paths) { const info = classifyPath(p); if (!info) continue; const key = `${info.vendor} / ${info.product}`; if (!map.has(key)) map.set(key, { vendor: info.vendor, product: info.product, sourceTypes: new Set(), confidence: info.confidence, paths: [] }); const e = map.get(key); e.sourceTypes.add(info.source); e.paths.push(p); if (e.confidence !== 'high' && info.confidence === 'high') e.confidence = 'high'; if (e.confidence === 'low' && info.confidence === 'medium') e.confidence = 'medium'; } return [...map.values()].map(e => ({ ...e, sourceTypes: [...e.sourceTypes].sort(), paths: uniqueSorted(e.paths) })).filter(e => !isImageOrTextureFileName(e.product)).sort((a, b) => `${a.vendor} ${a.product}`.localeCompare(`${b.vendor} ${b.product}`)); }
     function extractSceneNodeLabels(json) { const labels = []; const add = (node, area) => { if (!node || typeof node !== 'object') return; const label = node.label || node.name || node.id; if (!label || typeof label !== 'string') return; labels.push({ label: decodeDazPath(label).trim(), name: decodeDazPath(node.name || ''), id: decodeDazPath(node.id || ''), area }); }; if (Array.isArray(json.node_library)) json.node_library.forEach(n => add(n, 'node_library')); if (json.scene && Array.isArray(json.scene.nodes)) json.scene.nodes.forEach(n => add(n, 'scene.nodes')); const seen = new Set(); return labels.filter(i => { const k = `${i.area}|${i.label}|${i.id}`; if (seen.has(k)) return false; seen.add(k); return true; }); }
     function normaliseAssetPathForExactMatch(value) { let clean = decodeXmlEntities(decodeDazPath(String(value || ''))).replace(/\\/g, '/').split('#')[0].replace(/^file:/i, '').replace(/^\/+/, '').replace(/\/+/g, '/').trim().toLowerCase(); try { clean = decodeURIComponent(clean) } catch { } return clean; }
+    const COMMON_BASE_ASSET_PATHS = new Set([
+      'data/daz 3d/genesis 9/base/genesis9.dsf',
+      'data/daz 3d/genesis 8/female/genesis8female.dsf',
+      'data/daz 3d/genesis 8/male/genesis8male.dsf',
+      'data/daz 3d/genesis 8_1/female/genesis8_1female.dsf',
+      'data/daz 3d/genesis 8_1/male/genesis8_1male.dsf',
+      'data/daz 3d/genesis 3/female/genesis3female.dsf',
+      'data/daz 3d/genesis 3/male/genesis3male.dsf',
+      'data/daz 3d/genesis 2/female/genesis2female.dsf',
+      'data/daz 3d/genesis 2/male/genesis2male.dsf',
+      'data/daz 3d/genesis/base/genesis.dsf'
+    ]);
+    function isCommonBaseAssetPath(path) {
+      const p = normaliseAssetPathForExactMatch(path);
+      return COMMON_BASE_ASSET_PATHS.has(p) || /^data\/daz 3d\/genesis(?: [0-9](?:_[0-9])?)?\/[^/]+\/genesis(?:[0-9](?:_[0-9])?)?(?:female|male)?\.dsf$/i.test(p);
+    }
+    function getPathDisplayClass(path, sharedPaths = new Set()) {
+      if (isCommonBaseAssetPath(path)) return 'common-base-asset';
+      if (sharedPaths.has(path)) return 'shared-asset';
+      return '';
+    }
+    function renderAssetPathList(paths, sharedPaths = new Set()) {
+      return paths.map(p => {
+        const className = getPathDisplayClass(p, sharedPaths);
+        const classAttr = className ? ` class="${className}"` : '';
+        return `<li${classAttr}><code>${escapeHtml(p)}</code></li>`;
+      }).join('');
+    }
+    function extractInactiveModifierPaths(json) {
+      const ignored = [];
+      const walk = value => {
+        if (!value || typeof value !== 'object') return;
+        if (typeof value.url === 'string' && value.channel && Object.prototype.hasOwnProperty.call(value.channel, 'current_value')) {
+          const current = Number(value.channel.current_value);
+          if (Number.isFinite(current) && current === 0) ignored.push(normaliseAssetPathForExactMatch(value.url));
+        }
+        if (Array.isArray(value)) value.forEach(walk);
+        else Object.values(value).forEach(walk);
+      };
+      walk(json);
+      return uniqueSorted(ignored);
+    }
+    function filterInactiveModifierPaths(paths, inactivePaths) {
+      if (!inactivePaths || !inactivePaths.length) return paths;
+      const ignored = new Set(inactivePaths.map(normaliseAssetPathForExactMatch));
+      return paths.filter(p => !ignored.has(normaliseAssetPathForExactMatch(p)));
+    }
     function extractDsxValue(text, tag) { const m = new RegExp(`<${tag}\\s+VALUE="([^"]*)"`, 'i').exec(text); return m ? decodeXmlEntities(m[1]) : ''; }
     function extractDsxValues(text, tag) { const out = []; const rx = new RegExp(`<${tag}\\s+VALUE="([^"]*)"`, 'gi'); let m; while ((m = rx.exec(text)) !== null) out.push(decodeXmlEntities(m[1])); return out; }
     async function matchDsxFiles(rawAssetPaths, files) { const dsx = [...files].filter(f => f.name.toLowerCase().endsWith('.dsx')); const status = { enabled: dsx.length > 0, scannedFiles: dsx.length, indexedAssets: 0, matchedProducts: 0, message: 'DSX exact matching skipped.', matches: [] }; if (!dsx.length) { status.message = 'No DSX support folder selected. Exact product matching skipped.'; return status; } const sceneSet = new Set(rawAssetPaths.map(normaliseAssetPathForExactMatch).filter(Boolean)); const byFile = new Map(); for (let i = 0; i < dsx.length; i++) { if (i % 100 === 0) $('#status').textContent = `Scanning DSX files: ${i} of ${dsx.length}...`; let text = ''; try { text = await dsx[i].text() } catch { continue } const assets = uniqueSorted([...extractDsxValues(text, 'Asset'), ...extractDsxValues(text, 'SupportAsset'), ...extractDsxValues(text, 'ObjectCompatibility')].map(normaliseAssetPathForExactMatch)); status.indexedAssets += assets.length; const matched = assets.filter(a => sceneSet.has(a)); if (matched.length) { byFile.set(dsx[i].webkitRelativePath || dsx[i].name, { productName: extractDsxValue(text, 'Product') || dsx[i].name.replace(/\.dsx$/i, ''), storeId: extractDsxValue(text, 'StoreID'), productToken: extractDsxValue(text, 'ProductToken'), artists: extractDsxValues(text, 'Artist'), matchedPaths: matched }); } } status.matches = [...byFile.values()].sort((a, b) => b.matchedPaths.length - a.matchedPaths.length || a.productName.localeCompare(b.productName)); status.matchedProducts = status.matches.length; status.message = `DSX exact matching enabled. ${status.scannedFiles} .dsx files scanned, ${status.matchedProducts} product matches found.`; return status; }
-    function splitDsxMatchesBySpecificity(matches) { const usage = new Map(); matches.forEach(m => m.matchedPaths.forEach(p => usage.set(p, (usage.get(p) || 0) + 1))); const direct = [], possible = []; matches.forEach(m => { const unique = m.matchedPaths.filter(p => (usage.get(p) || 0) === 1); const shared = m.matchedPaths.filter(p => (usage.get(p) || 0) > 1); const e = { ...m, uniqueMatchedPaths: unique, sharedMatchedPaths: shared, uniqueMatchCount: unique.length, sharedMatchCount: shared.length }; (unique.length ? direct : possible).push(e); }); direct.sort((a, b) => b.uniqueMatchCount - a.uniqueMatchCount || b.matchedPaths.length - a.matchedPaths.length || a.productName.localeCompare(b.productName)); possible.sort((a, b) => b.sharedMatchCount - a.sharedMatchCount || a.productName.localeCompare(b.productName)); return { directMatches: direct, possibleMatches: possible }; }
+    function splitDsxMatchesBySpecificity(matches) {
+      const usage = new Map();
+      matches.forEach(m => m.matchedPaths.forEach(p => usage.set(p, (usage.get(p) || 0) + 1)));
+      const direct = [], possible = [], suppressedPossibleMatches = [];
+      matches.forEach(m => {
+        const unique = m.matchedPaths.filter(p => (usage.get(p) || 0) === 1);
+        const shared = m.matchedPaths.filter(p => (usage.get(p) || 0) > 1);
+        const specificShared = shared.filter(p => !isCommonBaseAssetPath(p));
+        const commonBaseShared = shared.filter(isCommonBaseAssetPath);
+        const e = {
+          ...m,
+          uniqueMatchedPaths: unique,
+          sharedMatchedPaths: shared,
+          specificSharedMatchedPaths: specificShared,
+          commonBaseMatchedPaths: commonBaseShared,
+          uniqueMatchCount: unique.length,
+          sharedMatchCount: shared.length,
+          specificSharedMatchCount: specificShared.length,
+          commonBaseMatchCount: commonBaseShared.length
+        };
+        if (unique.length) direct.push(e);
+        else if (specificShared.length) possible.push(e);
+        else suppressedPossibleMatches.push(e);
+      });
+      direct.sort((a, b) => b.uniqueMatchCount - a.uniqueMatchCount || b.matchedPaths.length - a.matchedPaths.length || a.productName.localeCompare(b.productName));
+      possible.sort((a, b) => b.specificSharedMatchCount - a.specificSharedMatchCount || a.productName.localeCompare(b.productName));
+      return { directMatches: direct, possibleMatches: possible, suppressedPossibleMatches };
+    }
     function isImageOrTextureFileName(name) { const p = String(name || '').toLowerCase().trim(); return /\.(jpg|jpeg|png|tif|tiff|bmp|exr|hdr)$/i.test(p) || /(^|[_\-\s])(basecolor|base_color|diffuse|albedo|normal|roughness|gloss|bump|opacity|alpha|metallic|specular|displacement|height)([_\-\s]|$)/i.test(p); }
-    function buildReport(result) { const dsxGroups = splitDsxMatchesBySpecificity(result.dsxStatus.matches || []); const productRows = result.products.map(p => `<tr><td>${escapeHtml(p.vendor)}</td><td>${escapeHtml(p.product)}</td><td>${escapeHtml(p.confidence)}</td><td>${escapeHtml(p.sourceTypes.join(', '))}</td><td>${p.paths.length}</td></tr>`).join(''); const labelRows = result.sceneNodeLabels.map(i => `<tr><td>${escapeHtml(i.label)}</td><td>${escapeHtml(i.name)}</td><td>${escapeHtml(i.id)}</td><td>${escapeHtml(i.area)}</td></tr>`).join(''); const assetRows = result.assetPaths.map((p, i) => `<tr><td>${i + 1}</td><td><code>${escapeHtml(p)}</code></td></tr>`).join(''); const dsxRows = dsxGroups.directMatches.map((m, i) => { const id = `dsx-assets-${i}`; return `<tr><td><strong>${escapeHtml(m.productName)}</strong></td><td>${escapeHtml(m.productToken)}</td><td>${escapeHtml(m.artists.join(', '))}</td><td>${m.uniqueMatchCount}</td><td>${m.sharedMatchCount}</td><td><button class="asset-toggle-btn" data-target="${id}" aria-expanded="false">matched assets</button></td></tr><tr id="${id}" class="asset-detail-row"><td colspan="6" class="asset-detail-cell"><strong>Matched assets for ${escapeHtml(m.productName)}</strong><ul>${m.matchedPaths.map(p => `<li><code>${escapeHtml(p)}</code></li>`).join('')}</ul></td></tr>` }).join(''); const possibleRows = dsxGroups.possibleMatches.map((m, i) => { const id = `possible-assets-${i}`; return `<tr><td><strong>${escapeHtml(m.productName)}</strong></td><td>${escapeHtml(m.productToken)}</td><td>${escapeHtml(m.artists.join(', '))}</td><td>${m.sharedMatchCount}</td><td><button class="asset-toggle-btn" data-target="${id}" aria-expanded="false">matched assets</button></td></tr><tr id="${id}" class="asset-detail-row"><td colspan="5" class="asset-detail-cell"><strong>Matched assets for ${escapeHtml(m.productName)}</strong><ul>${m.sharedMatchedPaths.map(p => `<li><code>${escapeHtml(p)}</code></li>`).join('')}</ul></td></tr>` }).join(''); const dsxSummaryMessage = escapeHtml(result.dsxStatus.message.replace(/,?\s*\d+\s+product matches found\.?/i, '.')); const dsxSummaryClass = result.dsxStatus.enabled ? '' : ' class="text-warning"'; return `<section class="card"><div class="card-body"><h2>Summary</h2><p><strong>DSX exact matching:</strong> <span${dsxSummaryClass}>${dsxSummaryMessage}</span></p><p class="muted summary-line"><strong>${result.dsxStatus.matchedProducts || 0}</strong> product matches, <strong>${result.products.length}</strong> likely products, <strong>${result.sceneNodeLabels.length}</strong> scene node labels, <strong>${result.assetPaths.length}</strong> raw asset paths.</p><div class="output-toolbar"><button id="downloadHtml">Download HTML report</button><button id="downloadTitles">Export product titles</button></div></div></section><details class="accordion card" open><summary><span>Exact product matches</span><span class="summary-meta">${dsxGroups.directMatches.length} direct, ${dsxGroups.possibleMatches.length} possible</span><span>▾</span></summary><div class="accordion-body"><input class="filter" data-table="dsxTable" placeholder="Filter exact matches..."><table id="dsxTable" class="sortable-table"><thead><tr><th>Product</th><th>Token</th><th>Artists</th><th>Unique matched paths</th><th>Shared matched paths</th><th>Matched assets</th></tr></thead><tbody>${dsxRows || '<tr><td colspan="6" class="muted">No exact product matches found.</td></tr>'}</tbody></table><details class="sub-accordion"><summary><span>Possible match</span><span class="summary-meta">${dsxGroups.possibleMatches.length} found ▾</span></summary><div class="sub-accordion-body"><p class="muted">Products only matched shared/common assets.</p><table id="possibleTable" class="sortable-table"><thead><tr><th>Product</th><th>Token</th><th>Artists</th><th>Shared matched paths</th><th>Matched assets</th></tr></thead><tbody>${possibleRows || '<tr><td colspan="5" class="muted">No possible matches found.</td></tr>'}</tbody></table></div></details></div></details><details class="accordion card"><summary><span>Likely products</span><span class="summary-meta">${result.products.length} found</span><span>▾</span></summary><div class="accordion-body"><input class="filter" data-table="productTable" placeholder="Filter products..."><table id="productTable" class="sortable-table"><thead><tr><th>Vendor</th><th>Product / asset folder</th><th>Confidence</th><th>Source</th><th>Paths</th></tr></thead><tbody>${productRows}</tbody></table></div></details><details class="accordion card"><summary><span>Scene node labels</span><span class="summary-meta">${result.sceneNodeLabels.length} found</span><span>▾</span></summary><div class="accordion-body"><input class="filter" data-table="labelTable" placeholder="Filter node labels..."><table id="labelTable" class="sortable-table"><thead><tr><th>Label</th><th>Name</th><th>ID</th><th>Area</th></tr></thead><tbody>${labelRows}</tbody></table></div></details><details class="accordion card"><summary><span>Raw asset paths</span><span class="summary-meta">${result.assetPaths.length} found</span><span>▾</span></summary><div class="accordion-body"><input class="filter" data-table="assetTable" placeholder="Filter raw paths..."><table id="assetTable" class="sortable-table"><thead><tr><th>#</th><th>Raw asset path</th></tr></thead><tbody>${assetRows}</tbody></table></div></details>`; }
+    function buildReport(result) {
+      const dsxGroups = splitDsxMatchesBySpecificity(result.dsxStatus.matches || []);
+      const productRows = result.products.map(p => `<tr><td>${escapeHtml(p.vendor)}</td><td>${escapeHtml(p.product)}</td><td>${escapeHtml(p.confidence)}</td><td>${escapeHtml(p.sourceTypes.join(', '))}</td><td>${p.paths.length}</td></tr>`).join('');
+      const labelRows = result.sceneNodeLabels.map(i => `<tr><td>${escapeHtml(i.label)}</td><td>${escapeHtml(i.name)}</td><td>${escapeHtml(i.id)}</td><td>${escapeHtml(i.area)}</td></tr>`).join('');
+      const assetRows = result.assetPaths.map((p, i) => `<tr><td>${i + 1}</td><td><code>${escapeHtml(p)}</code></td></tr>`).join('');
+      const ignoredInactiveCount = result.ignoredInactivePaths?.length || 0;
+      const suppressedCommonCount = dsxGroups.suppressedPossibleMatches?.length || 0;
+      const displayedDsxMatchCount = dsxGroups.directMatches.length + dsxGroups.possibleMatches.length;
+      const infoNotes = [
+        ignoredInactiveCount ? `${ignoredInactiveCount} zero-value modifier path${ignoredInactiveCount === 1 ? '' : 's'} excluded from matching.` : '',
+        suppressedCommonCount ? `${suppressedCommonCount} common base-only possible match${suppressedCommonCount === 1 ? '' : 'es'} suppressed.` : ''
+      ].filter(Boolean);
+      const noteMarkup = infoNotes.length ? `<p class="ignored-match-note">${escapeHtml(infoNotes.join(' '))}</p>` : '';
+      const dsxRows = dsxGroups.directMatches.map((m, i) => {
+        const id = `dsx-assets-${i}`;
+        const sharedSet = new Set(m.sharedMatchedPaths || []);
+        return `<tr><td><strong>${escapeHtml(m.productName)}</strong></td><td>${escapeHtml(m.productToken)}</td><td>${escapeHtml(m.artists.join(', '))}</td><td>${m.uniqueMatchCount}</td><td>${m.sharedMatchCount}</td><td><button class="asset-toggle-btn" data-target="${id}" aria-expanded="false">matched assets</button></td></tr><tr id="${id}" class="asset-detail-row"><td colspan="6" class="asset-detail-cell"><strong class="asset-detail-heading">Matched assets for ${escapeHtml(m.productName)}</strong><ul>${renderAssetPathList(m.matchedPaths, sharedSet)}</ul></td></tr>`;
+      }).join('');
+      const possibleRows = dsxGroups.possibleMatches.map((m, i) => {
+        const id = `possible-assets-${i}`;
+        const possibleDisplayPaths = [...(m.specificSharedMatchedPaths || []), ...(m.commonBaseMatchedPaths || [])];
+        return `<tr><td><strong>${escapeHtml(m.productName)}</strong></td><td>${escapeHtml(m.productToken)}</td><td>${escapeHtml(m.artists.join(', '))}</td><td>${m.specificSharedMatchCount}</td><td><button class="asset-toggle-btn" data-target="${id}" aria-expanded="false">matched assets</button></td></tr><tr id="${id}" class="asset-detail-row"><td colspan="5" class="asset-detail-cell"><strong class="asset-detail-heading">Matched assets for ${escapeHtml(m.productName)}</strong><ul>${renderAssetPathList(possibleDisplayPaths, new Set(m.specificSharedMatchedPaths || []))}</ul></td></tr>`;
+      }).join('');
+      const dsxSummaryMessage = escapeHtml(result.dsxStatus.message.replace(/,?\s*\d+\s+product matches found\.?/i, '.'));
+      const dsxSummaryClass = result.dsxStatus.enabled ? '' : ' class="text-warning"';
+      return `<section class="card"><div class="card-body"><h2>Summary</h2><p><strong>DSX exact matching:</strong> <span${dsxSummaryClass}>${dsxSummaryMessage}</span></p><p class="muted summary-line"><strong>${displayedDsxMatchCount}</strong> displayed DSX product matches, <strong>${result.products.length}</strong> likely products, <strong>${result.sceneNodeLabels.length}</strong> scene node labels, <strong>${result.assetPaths.length}</strong> raw asset paths.</p>${noteMarkup}<div class="output-toolbar"><button id="downloadHtml">Download HTML report</button><button id="downloadTitles">Export product titles</button></div></div></section><details class="accordion card" open><summary><span>Exact product matches</span><span class="summary-meta">${dsxGroups.directMatches.length} direct, ${dsxGroups.possibleMatches.length} possible</span><span>▾</span></summary><div class="accordion-body"><input class="filter" data-table="dsxTable" placeholder="Filter exact matches..."><table id="dsxTable" class="sortable-table"><thead><tr><th>Product</th><th>Token</th><th>Artists</th><th>Unique matched paths</th><th>Shared matched paths</th><th>Matched assets</th></tr></thead><tbody>${dsxRows || '<tr><td colspan="6" class="muted">No exact product matches found.</td></tr>'}</tbody></table><details class="sub-accordion"><summary><span>Possible match</span><span class="summary-meta">${dsxGroups.possibleMatches.length} found ▾</span></summary><div class="sub-accordion-body"><p class="muted">Products matched shared assets other than common base figure files. Shared morphs are highlighted.</p><table id="possibleTable" class="sortable-table"><thead><tr><th>Product</th><th>Token</th><th>Artists</th><th>Specific shared paths</th><th>Matched assets</th></tr></thead><tbody>${possibleRows || '<tr><td colspan="5" class="muted">No possible matches found.</td></tr>'}</tbody></table></div></details></div></details><details class="accordion card"><summary><span>Likely products</span><span class="summary-meta">${result.products.length} found</span><span>▾</span></summary><div class="accordion-body"><input class="filter" data-table="productTable" placeholder="Filter products..."><table id="productTable" class="sortable-table"><thead><tr><th>Vendor</th><th>Product / asset folder</th><th>Confidence</th><th>Source</th><th>Paths</th></tr></thead><tbody>${productRows}</tbody></table></div></details><details class="accordion card"><summary><span>Scene node labels</span><span class="summary-meta">${result.sceneNodeLabels.length} found</span><span>▾</span></summary><div class="accordion-body"><input class="filter" data-table="labelTable" placeholder="Filter node labels..."><table id="labelTable" class="sortable-table"><thead><tr><th>Label</th><th>Name</th><th>ID</th><th>Area</th></tr></thead><tbody>${labelRows}</tbody></table></div></details><details class="accordion card"><summary><span>Raw asset paths</span><span class="summary-meta">${result.assetPaths.length} found</span><span>▾</span></summary><div class="accordion-body"><input class="filter" data-table="assetTable" placeholder="Filter raw paths..."><table id="assetTable" class="sortable-table"><thead><tr><th>#</th><th>Raw asset path</th></tr></thead><tbody>${assetRows}</tbody></table></div></details>`;
+    }
     function getSceneTitleFromFileName(fileName) {
       return String(fileName || 'daz-scene')
         .replace(/\.duf\.gz$/i, '')
@@ -736,7 +864,7 @@
       });
     }
 
-    $('#runBtn').addEventListener('click', async () => { try { const file = $('#dufFile').files[0]; if (!file) { $('#status').textContent = 'Please select a .duf scene file first.'; return } markDsxPanelIfMissing(); $('#runBtn').disabled = true; $('#status').textContent = 'Reading scene file...'; const text = await readSceneText(file); let json = {}; try { json = JSON.parse(text) } catch { } const assetPaths = extractQuotedPaths(text); const products = extractLikelyProducts(assetPaths); const sceneNodeLabels = extractSceneNodeLabels(json); const dsxStatus = await matchDsxFiles(assetPaths, $('#dsxFolder').files || []); currentResult = { inputFile: file.name, assetPaths, products, sceneNodeLabels, dsxStatus }; $('#report').innerHTML = buildReport(currentResult); $('#report').classList.remove('hidden'); $('#status').textContent = 'Report generated.'; wireReport(); } catch (err) { $('#status').textContent = 'Error: ' + err.message; } finally { $('#runBtn').disabled = false; } });
+    $('#runBtn').addEventListener('click', async () => { try { const file = $('#dufFile').files[0]; if (!file) { $('#status').textContent = 'Please select a .duf scene file first.'; return } markDsxPanelIfMissing(); $('#runBtn').disabled = true; $('#status').textContent = 'Reading scene file...'; const text = await readSceneText(file); let json = {}; try { json = JSON.parse(text) } catch { } const allAssetPaths = extractQuotedPaths(text); const ignoredInactivePaths = extractInactiveModifierPaths(json); const assetPaths = filterInactiveModifierPaths(allAssetPaths, ignoredInactivePaths); const products = extractLikelyProducts(assetPaths); const sceneNodeLabels = extractSceneNodeLabels(json); const dsxStatus = await matchDsxFiles(assetPaths, $('#dsxFolder').files || []); currentResult = { inputFile: file.name, assetPaths, products, sceneNodeLabels, dsxStatus, ignoredInactivePaths }; $('#report').innerHTML = buildReport(currentResult); $('#report').classList.remove('hidden'); $('#status').textContent = 'Report generated.'; wireReport(); } catch (err) { $('#status').textContent = 'Error: ' + err.message; } finally { $('#runBtn').disabled = false; } });
     $('#clearBtn').addEventListener('click', () => { $('#dufFile').value = ''; $('#dsxFolder').value = ''; $('#report').innerHTML = ''; $('#report').classList.add('hidden'); $('#status').textContent = 'Ready.'; currentResult = null; document.getElementById('dsxFolderPanel')?.classList.remove('selection-warning', 'selection-warning-pulse'); wireSelectionPanels(); loadRememberedDsxFolderHint(); });
 
     function getCellSortValue(row, index) {
