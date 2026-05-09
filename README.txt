@@ -1,4 +1,4 @@
-DAZ Studio Scene Asset Auditor (Browser Tool)
+DAZ Studio Scene Asset Auditor v1.1 (Browser Tool)
 =============================================
 This tool scans a DAZ Studio .duf scene file and generates a report showing:
 
