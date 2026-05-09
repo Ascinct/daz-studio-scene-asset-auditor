@@ -851,12 +851,6 @@ remembered on next load. Chrome or Edge is recommended for persistence.</p>
         if (e.name !== 'AbortError') $('#status').textContent = 'Could not open folder picker: ' + e.message;
         return;
       }
-      // Check for duplicates by name (best effort. Handles aren't directly comparable.)
-      const duplicate = dsxFolderEntries.find(e => e.type === 'fsa' && e.name === handle.name);
-      if (duplicate) {
-        $('#status').textContent = `Folder "${handle.name}" is already in the list.`;
-        return;
-      }
       const id = genId();
       const entry = { id, name: handle.name, type: 'fsa', handle, fileCount: null, status: 'ready' };
       dsxFolderEntries.push(entry);
@@ -871,14 +865,6 @@ remembered on next load. Chrome or Edge is recommended for persistence.</p>
       if (!fileArray.length) { $('#status').textContent = 'No .dsx files found in the selected folder.'; return; }
       const firstPath = files[0].webkitRelativePath || files[0].name || '';
       const name = firstPath.includes('/') ? firstPath.split('/')[0] : 'Selected folder';
-      const duplicate = dsxFolderEntries.find(e => e.type === 'legacy' && e.name === name);
-      if (duplicate) {
-        // Replace the existing entry for the same folder name
-        duplicate.legacyFiles = fileArray;
-        duplicate.fileCount = fileArray.length;
-        renderFolderList();
-        return;
-      }
       const id = genId();
       const entry = { id, name, type: 'legacy', handle: null, legacyFiles: fileArray, fileCount: fileArray.length, status: 'ready' };
       dsxFolderEntries.push(entry);
