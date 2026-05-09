@@ -201,6 +201,23 @@
 
     input[type=file] { width: 100%; color: var(--muted); }
 
+    input[type=file]::file-selector-button {
+      display: inline-block;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 10px 16px;
+      margin-right: 10px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 400;
+      white-space: nowrap;
+    }
+
+    input[type=file]::file-selector-button:hover { border-color: var(--accent); }
+
     .actions, .output-toolbar {
       display: flex;
       gap: 8px;
@@ -483,6 +500,92 @@
       color: var(--muted);
       margin: 6px 0 0;
     }
+
+    .reconnect-note {
+      font-size: 13px;
+      color: var(--warning-text);
+      background: var(--warning-bg);
+      border: 1px solid var(--warning-border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin: 10px 0 10px;
+    }
+
+    /* ── Pending re-link list (shown after a backup file is loaded) ── */
+    .pending-folder-section {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px dashed var(--border);
+    }
+
+    .pending-folder-heading {
+      margin: 0 0 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .pending-folder-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      background: var(--folder-item-bg);
+      border: 1px dashed var(--folder-warn);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 13px;
+      min-width: 0;
+      margin-bottom: 7px;
+    }
+
+    .pending-folder-item:last-child { margin-bottom: 0; }
+
+    .pending-locate-btn {
+      flex-shrink: 0;
+      font-size: 12px;
+      padding: 5px 12px;
+    }
+
+    .pending-folder-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .pending-folder-name-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      min-width: 0;
+    }
+
+    .pending-folder-path {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .pending-folder-path code {
+      font-size: 11px;
+    }
+
+    .pending-notes {
+      margin: 0 0 10px;
+      padding: 9px 12px;
+      background: var(--folder-item-bg);
+      border: 1px solid var(--folder-item-border);
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--text);
+      white-space: pre-wrap;
+    }
+
+    .pending-notes-label {
+      font-weight: 700;
+      color: var(--muted);
+      margin-right: 6px;
+    }
   </style>
 </head>
 
@@ -490,7 +593,7 @@
   <header>
     <div class="header-inner">
       <div>
-        <h1>DAZ Studio Scene Asset Auditor</h1>
+        <h1>DAZ Studio Scene Asset Auditor v1.1</h1>
         <div>Drop in a DAZ scene file and generate a shareable asset report from your browser. Developed by <a href="https://www.ascinct.com/">Ascinct</a>.</div>
       </div>
       <button id="themeToggle" class="theme-toggle" type="button" aria-pressed="true">Dark mode</button>
@@ -514,15 +617,25 @@
           <!-- DSX folder panel — multi-folder -->
           <div class="field selection-needed" id="dsxFolderPanel">
             <label>Optional DSX support folders</label>
-            <p class="muted small">Add one or more folders containing DAZ <code>.dsx</code> support files, typically <code>Runtime/Support</code>. Folders are remembered across sessions in Chrome/Edge.</p>
+            <p class="muted small">Add one or more folders containing DAZ <code>.dsx</code> support files, typically <code>Runtime/Support</code>. Selected folders are remembered across sessions in Chrome/Edge.</p>
             <div id="folderList" class="folder-list"><p class="folder-empty-note">No folders added yet.</p></div>
+            <p id="reconnectNote" class="reconnect-note hidden">Folders marked <span class="folder-status-warn">⚠</span> will reconnect when you click <strong>Generate report</strong>. Your browser will ask permission for each folder listed.</p>
             <div class="folder-actions">
               <button id="addFolderBtn" type="button">+ Add folder</button>
+              <button id="exportFoldersBtn" type="button">Backup folder list</button>
+              <button id="restoreFoldersBtn" type="button">Restore from backup</button>
               <!-- hidden fallback input for browsers without File System Access API -->
               <input id="dsxFolderFallback" type="file" webkitdirectory="" directory="" multiple="" class="hidden">
+              <!-- hidden file input for restoring a backup JSON -->
+              <input id="restoreFoldersInput" type="file" accept=".json,application/json" class="hidden">
             </div>
-            <p id="fsaNote" class="fsa-note">Your browser doesn't 
-support the File System Access API. Folders added this session won't be 
+            <div id="pendingFolderSection" class="pending-folder-section hidden">
+              <p class="pending-folder-heading">Restored from backup. Click "Locate" beside each folder name to re-link it.</p>
+              <div id="pendingNotesDisplay" class="pending-notes hidden"></div>
+              <div id="pendingFolderList" class="folder-list"></div>
+            </div>
+            <p id="fsaNote" class="fsa-note hidden">Your browser doesn't
+support the File System Access API. Folders added this session won't be
 remembered on next load. Chrome or Edge is recommended for persistence.</p>
           </div>
         </div>
@@ -575,7 +688,7 @@ remembered on next load. Chrome or Edge is recommended for persistence.</p>
       const possibleRows = dsxGroups.possibleMatches.map((m, i) => { const id = `possible-assets-${i}`; const possibleDisplayPaths = [...(m.specificSharedMatchedPaths || []), ...(m.commonBaseMatchedPaths || [])]; return `<tr><td><strong>${escapeHtml(m.productName)}</strong></td><td>${escapeHtml(m.productToken)}</td><td>${escapeHtml(m.artists.join(', '))}</td><td>${m.specificSharedMatchCount}</td><td><button class="asset-toggle-btn" data-target="${id}" aria-expanded="false">matched assets</button></td></tr><tr id="${id}" class="asset-detail-row"><td colspan="5" class="asset-detail-cell"><strong class="asset-detail-heading">Matched assets for ${escapeHtml(m.productName)}</strong><ul>${renderAssetPathList(possibleDisplayPaths, new Set(m.specificSharedMatchedPaths || []))}</ul></td></tr>`; }).join('');
       const dsxSummaryMessage = escapeHtml(result.dsxStatus.message.replace(/,?\s*\d+\s+product matches found\.?/i, '.'));
       const dsxSummaryClass = result.dsxStatus.enabled ? '' : ' class="text-warning"';
-      return `<section class="card"><div class="card-body"><h2>Summary</h2><p><strong>DSX exact matching:</strong> <span${dsxSummaryClass}>${dsxSummaryMessage}</span></p><p class="muted summary-line"><strong>${displayedDsxMatchCount}</strong> displayed DSX product matches, <strong>${result.products.length}</strong> likely products, <strong>${result.sceneNodeLabels.length}</strong> scene node labels, <strong>${result.assetPaths.length}</strong> raw asset paths.</p>${noteMarkup}<div class="output-toolbar"><button id="downloadHtml">Download HTML report</button><button id="downloadTitles">Export product titles</button></div></div></section><details class="accordion card" open><summary><span>Exact product matches</span><span class="summary-meta">${dsxGroups.directMatches.length} direct, ${dsxGroups.possibleMatches.length} possible</span><span>▾</span></summary><div class="accordion-body"><input class="filter" data-table="dsxTable" placeholder="Filter exact matches..."><table id="dsxTable" class="sortable-table"><thead><tr><th>Product</th><th>Token</th><th>Artists</th><th>Unique matched paths</th><th>Shared matched paths</th><th>Matched assets</th></tr></thead><tbody>${dsxRows || '<tr><td colspan="6" class="muted">No exact product matches found.</td></tr>'}</tbody></table><details class="sub-accordion"><summary><span>Possible match</span><span class="summary-meta">${dsxGroups.possibleMatches.length} found ▾</span></summary><div class="sub-accordion-body"><p class="muted">Products matched shared assets other than common base figure files. Shared morphs are highlighted.</p><table id="possibleTable" class="sortable-table"><thead><tr><th>Product</th><th>Token</th><th>Artists</th><th>Specific shared paths</th><th>Matched assets</th></tr></thead><tbody>${possibleRows || '<tr><td colspan="5" class="muted">No possible matches found.</td></tr>'}</tbody></table></div></details></div></details><details class="accordion card"><summary><span>Likely products</span><span class="summary-meta">${result.products.length} found</span><span>▾</span></summary><div class="accordion-body"><input class="filter" data-table="productTable" placeholder="Filter products..."><table id="productTable" class="sortable-table"><thead><tr><th>Vendor</th><th>Product / asset folder</th><th>Confidence</th><th>Source</th><th>Paths</th></tr></thead><tbody>${productRows}</tbody></table></div></details><details class="accordion card"><summary><span>Scene node labels</span><span class="summary-meta">${result.sceneNodeLabels.length} found</span><span>▾</span></summary><div class="accordion-body"><input class="filter" data-table="labelTable" placeholder="Filter node labels..."><table id="labelTable" class="sortable-table"><thead><tr><th>Label</th><th>Name</th><th>ID</th><th>Area</th></tr></thead><tbody>${labelRows}</tbody></table></div></details><details class="accordion card"><summary><span>Raw asset paths</span><span class="summary-meta">${result.assetPaths.length} found</span><span>▾</span></summary><div class="accordion-body"><input class="filter" data-table="assetTable" placeholder="Filter raw paths..."><table id="assetTable" class="sortable-table"><thead><tr><th>#</th><th>Raw asset path</th></tr></thead><tbody>${assetRows}</tbody></table></div></details>`;
+      return `<section class="card"><div class="card-body"><h2>Summary</h2><p><strong>DSX exact matching:</strong> <span${dsxSummaryClass}>${dsxSummaryMessage}</span></p><p class="muted summary-line"><strong>${displayedDsxMatchCount}</strong> displayed DSX product matches, <strong>${result.products.length}</strong> likely products, <strong>${result.sceneNodeLabels.length}</strong> scene node labels, <strong>${result.assetPaths.length}</strong> raw asset paths.</p>${noteMarkup}<div class="output-toolbar"><button id="downloadHtml">Download HTML report</button><button id="downloadTitles">Export product titles</button></div></div></section><details class="accordion card" open><summary><span>Exact product matches</span><span class="summary-meta">${dsxGroups.directMatches.length} direct, ${dsxGroups.possibleMatches.length} possible</span><span>▾</span></summary><div class="accordion-body"><input class="filter" data-table="dsxTable" placeholder="Filter exact matches..."><table id="dsxTable" class="sortable-table"><thead><tr><th>Product</th><th>Token</th><th>Artists</th><th>Unique matched paths</th><th>Shared matched paths</th><th>Matched assets</th></tr></thead><tbody>${dsxRows || '<tr><td colspan="6" class="muted">No exact product matches found.</td></tr>'}</tbody></table><details class="sub-accordion"><summary><span>Possible match</span><span class="summary-meta">${dsxGroups.possibleMatches.length} found ▾</span></summary><div class="sub-accordion-body"><p class="muted">Products matched shared assets. Shared morphs are highlighted.</p><table id="possibleTable" class="sortable-table"><thead><tr><th>Product</th><th>Token</th><th>Artists</th><th>Specific shared paths</th><th>Matched assets</th></tr></thead><tbody>${possibleRows || '<tr><td colspan="5" class="muted">No possible matches found.</td></tr>'}</tbody></table></div></details></div></details><details class="accordion card"><summary><span>Likely products</span><span class="summary-meta">${result.products.length} found</span><span>▾</span></summary><div class="accordion-body"><input class="filter" data-table="productTable" placeholder="Filter products..."><table id="productTable" class="sortable-table"><thead><tr><th>Vendor</th><th>Product / asset folder</th><th>Confidence</th><th>Source</th><th>Paths</th></tr></thead><tbody>${productRows}</tbody></table></div></details><details class="accordion card"><summary><span>Scene node labels</span><span class="summary-meta">${result.sceneNodeLabels.length} found</span><span>▾</span></summary><div class="accordion-body"><input class="filter" data-table="labelTable" placeholder="Filter node labels..."><table id="labelTable" class="sortable-table"><thead><tr><th>Label</th><th>Name</th><th>ID</th><th>Area</th></tr></thead><tbody>${labelRows}</tbody></table></div></details><details class="accordion card"><summary><span>Raw asset paths</span><span class="summary-meta">${result.assetPaths.length} found</span><span>▾</span></summary><div class="accordion-body"><input class="filter" data-table="assetTable" placeholder="Filter raw paths..."><table id="assetTable" class="sortable-table"><thead><tr><th>#</th><th>Raw asset path</th></tr></thead><tbody>${assetRows}</tbody></table></div></details>`;
     }
 
     function getSceneTitleFromFileName(fileName) { return String(fileName || 'daz-scene').replace(/\.duf\.gz$/i, '').replace(/\.duf$/i, '').replace(/\.gz$/i, '').trim() || 'daz-scene'; }
@@ -688,6 +801,13 @@ remembered on next load. Chrome or Edge is recommended for persistence.</p>
         panel.classList.remove('selection-warning', 'selection-warning-pulse');
       }
 
+      // Show "will reconnect" hint when restored folders are awaiting permission
+      const reconnectNote = document.getElementById('reconnectNote');
+      if (reconnectNote) {
+        const anyNeedsPermission = FSA_SUPPORTED && dsxFolderEntries.some(e => e.status === 'needs-permission');
+        reconnectNote.classList.toggle('hidden', !anyNeedsPermission);
+      }
+
       if (!dsxFolderEntries.length) {
         container.innerHTML = '<p class="folder-empty-note">No folders added yet.</p>';
         return;
@@ -706,7 +826,7 @@ remembered on next load. Chrome or Edge is recommended for persistence.</p>
           : '<span class="folder-item-type">session</span>';
 
         const statusTitle = entry.status === 'needs-permission'
-          ? ' title="Permission needed — will be requested when you generate the report"'
+          ? ' title="Permission needed. Will be requested when you generate the report."'
           : '';
 
         return `<div class="folder-item"${statusTitle}>
@@ -731,7 +851,7 @@ remembered on next load. Chrome or Edge is recommended for persistence.</p>
         if (e.name !== 'AbortError') $('#status').textContent = 'Could not open folder picker: ' + e.message;
         return;
       }
-      // Check for duplicates by name (best effort — handles aren't directly comparable)
+      // Check for duplicates by name (best effort. Handles aren't directly comparable.)
       const duplicate = dsxFolderEntries.find(e => e.type === 'fsa' && e.name === handle.name);
       if (duplicate) {
         $('#status').textContent = `Folder "${handle.name}" is already in the list.`;
@@ -780,7 +900,7 @@ remembered on next load. Chrome or Edge is recommended for persistence.</p>
         }
         entry.fileCount = count;
         renderFolderList();
-      } catch { /* permission not yet granted — will be counted during report run */ }
+      } catch { /* permission not yet granted. Will be counted during report run. */ }
     }
 
     // Collect all DSX File objects from all folder entries.
@@ -838,6 +958,219 @@ remembered on next load. Chrome or Edge is recommended for persistence.</p>
         if (status === 'ready') countDsxFilesForEntry(entry);
       }
       renderFolderList();
+    }
+
+    // =========================================================
+    // Backup / Restore — folder bookmarks as a portable JSON file
+    // =========================================================
+    // Browsers don't expose real folder paths to web pages, so a backup
+    // file can only store folder NAMES and metadata. On restore, the user
+    // must re-pick each folder via the directory picker. This works after
+    // a full browser cache wipe, on a different profile, or a different
+    // machine, as long as the same folder names exist on disk.
+    //
+    // Backup file shape:
+    //   { version: 1, app: '...', exportedAt: ISO, folders: [{ id, name, type, fileCount }] }
+    //
+    // Only 'fsa' entries are restorable. 'legacy' entries (browsers without
+    // the File System Access API) are session-only and not included.
+
+    let pendingFolders = [];
+
+    function exportFolderConfig() {
+      const fsaEntries = dsxFolderEntries.filter(e => e.type === 'fsa');
+      if (!fsaEntries.length) {
+        $('#status').textContent = 'No persistent folders to back up. Add at least one folder first.';
+        return;
+      }
+      const data = {
+        _readme: 'Optional: open this file in a text editor and paste your real folder paths into each folder\'s "path" field, and any general comments into the top-level "notes" field. Paste Windows paths exactly as they are (e.g. D:\\Programs\\Daz Studio\\...) - the app cleans them up on import. Browsers cannot use these strings to auto-open folders, but the app shows them next to each folder name on restore so you know which folder to re-pick.',
+        version: 1,
+        app: 'daz-studio-scene-asset-auditor',
+        exportedAt: new Date().toISOString(),
+        notes: '',
+        folders: fsaEntries.map(e => ({
+          id: e.id,
+          name: e.name,
+          type: e.type,
+          fileCount: e.fileCount,
+          path: ''
+        }))
+      };
+      const stamp = new Date().toISOString().slice(0, 10);
+      download(`daz-auditor-folder-backup-${stamp}.json`, JSON.stringify(data, null, 2), 'application/json');
+      $('#status').textContent = `Backed up ${data.folders.length} folder${data.folders.length === 1 ? '' : 's'}. Open the file in a text editor to add your folder paths and notes.`;
+    }
+
+    // Lenient JSON parser. Tries strict JSON.parse first; if that fails,
+    // auto-escapes any backslashes that aren't already part of a valid JSON
+    // escape sequence (\", \\, \/, \b, \f, \n, \r, \t, \u). This means users
+    // can paste raw Windows paths like "D:\Programs\Daz Studio\..." into the
+    // path/notes fields without having to escape every backslash by hand.
+    function parseJsonLenient(text) {
+      try {
+        return JSON.parse(text);
+      } catch (initialError) {
+        const fixed = String(text).replace(/\\(?!["\\/bfnrtu])/g, '\\\\');
+        try {
+          return JSON.parse(fixed);
+        } catch {
+          throw initialError; // surface the original parse error to the user
+        }
+      }
+    }
+
+    async function importFolderConfig(file) {
+      if (!file) return;
+      if (!FSA_SUPPORTED) {
+        $('#status').textContent = 'Restore requires Chrome or Edge (File System Access API).';
+        return;
+      }
+      let data;
+      try {
+        data = parseJsonLenient(await file.text());
+      } catch (e) {
+        $('#status').textContent = 'Could not parse backup file: ' + e.message;
+        return;
+      }
+      if (!data || !Array.isArray(data.folders)) {
+        $('#status').textContent = 'Backup file is not in the expected format.';
+        return;
+      }
+
+      // Display top-level notes if present (otherwise hide the notes block)
+      const notesEl = document.getElementById('pendingNotesDisplay');
+      const topNotes = typeof data.notes === 'string' ? data.notes.trim() : '';
+      if (notesEl) {
+        if (topNotes) {
+          notesEl.innerHTML = `<span class="pending-notes-label">Notes:</span>${escapeHtml(topNotes)}`;
+          notesEl.classList.remove('hidden');
+        } else {
+          notesEl.innerHTML = '';
+          notesEl.classList.add('hidden');
+        }
+      }
+
+      // Skip names that are already in the active folder list
+      const activeFsaNames = new Set(dsxFolderEntries.filter(e => e.type === 'fsa').map(e => e.name));
+      const incoming = data.folders
+        .filter(f => f && f.name && (!f.type || f.type === 'fsa'))
+        .filter(f => !activeFsaNames.has(f.name));
+
+      // Merge with anything still pending (avoid duplicate names)
+      const pendingNames = new Set(pendingFolders.map(p => p.name));
+      const additions = incoming
+        .filter(f => !pendingNames.has(f.name))
+        .map(f => ({
+          id: f.id || genId(),
+          name: f.name,
+          expectedFileCount: typeof f.fileCount === 'number' ? f.fileCount : null,
+          path: typeof f.path === 'string' ? f.path.trim() : ''
+        }));
+      pendingFolders = pendingFolders.concat(additions);
+      renderPendingFolders();
+
+      const skipped = data.folders.length - additions.length;
+      if (additions.length === 0) {
+        $('#status').textContent = `Backup loaded. No new folders to restore (${skipped} already present or duplicate).`;
+      } else {
+        const skipMsg = skipped > 0 ? ` (${skipped} already present or duplicate)` : '';
+        $('#status').textContent = `${additions.length} folder${additions.length === 1 ? '' : 's'} pending re-link${skipMsg}. Click "Locate" beside each name.`;
+      }
+    }
+
+    function renderPendingFolders() {
+      const section = document.getElementById('pendingFolderSection');
+      const container = document.getElementById('pendingFolderList');
+      if (!section || !container) return;
+      if (!pendingFolders.length) {
+        section.classList.add('hidden');
+        container.innerHTML = '';
+        const notesEl = document.getElementById('pendingNotesDisplay');
+        if (notesEl) { notesEl.innerHTML = ''; notesEl.classList.add('hidden'); }
+        return;
+      }
+      section.classList.remove('hidden');
+      container.innerHTML = pendingFolders.map(p => `
+        <div class="pending-folder-item">
+          <span class="folder-status-warn folder-status-icon">⚠</span>
+          <div class="pending-folder-info">
+            <div class="pending-folder-name-row">
+              <span class="folder-item-name">${escapeHtml(p.name)}</span>
+              ${p.expectedFileCount !== null ? `<span class="folder-item-count muted small">~${escapeHtml(String(p.expectedFileCount))} .dsx expected</span>` : ''}
+            </div>
+            ${p.path ? `<div class="pending-folder-path"><code>${escapeHtml(p.path)}</code></div>` : ''}
+          </div>
+          <button class="pending-locate-btn primary" data-action="locate" data-id="${escapeHtml(p.id)}" type="button">Locate</button>
+          <button class="folder-remove-btn" data-action="dismiss" data-id="${escapeHtml(p.id)}" title="Remove from pending list" type="button">×</button>
+        </div>
+      `).join('');
+      container.querySelectorAll('button[data-action="locate"]').forEach(btn => {
+        btn.addEventListener('click', () => relinkPendingFolder(btn.dataset.id));
+      });
+      container.querySelectorAll('button[data-action="dismiss"]').forEach(btn => {
+        btn.addEventListener('click', () => dismissPendingFolder(btn.dataset.id));
+      });
+    }
+
+    async function relinkPendingFolder(pendingId) {
+      const pending = pendingFolders.find(p => p.id === pendingId);
+      if (!pending) return;
+      let handle;
+      try {
+        handle = await window.showDirectoryPicker({ mode: 'read' });
+      } catch (e) {
+        if (e.name !== 'AbortError') $('#status').textContent = 'Could not open folder picker: ' + e.message;
+        return;
+      }
+      // Warn if the user picked a folder with a different name
+      if (handle.name !== pending.name) {
+        const ok = confirm(`You picked "${handle.name}" but the backup expected "${pending.name}". Use it anyway?`);
+        if (!ok) return;
+      }
+      // Avoid duplicates against active list
+      if (dsxFolderEntries.find(e => e.type === 'fsa' && e.name === handle.name)) {
+        $('#status').textContent = `Folder "${handle.name}" is already in the active list.`;
+        pendingFolders = pendingFolders.filter(p => p.id !== pendingId);
+        renderPendingFolders();
+        return;
+      }
+      const entry = { id: pending.id, name: handle.name, type: 'fsa', handle, legacyFiles: null, fileCount: null, status: 'ready' };
+      dsxFolderEntries.push(entry);
+      await idbPut({ id: entry.id, name: entry.name, handle });
+      pendingFolders = pendingFolders.filter(p => p.id !== pendingId);
+      renderFolderList();
+      renderPendingFolders();
+      countDsxFilesForEntry(entry);
+      $('#status').textContent = `Re-linked "${entry.name}".`;
+    }
+
+    function dismissPendingFolder(pendingId) {
+      pendingFolders = pendingFolders.filter(p => p.id !== pendingId);
+      renderPendingFolders();
+    }
+
+    function wireBackupRestoreButtons() {
+      const exportBtn = document.getElementById('exportFoldersBtn');
+      const restoreBtn = document.getElementById('restoreFoldersBtn');
+      const restoreInput = document.getElementById('restoreFoldersInput');
+
+      // Hide both buttons if FSA isn't supported. Without FSA, exported backups
+      // can't be restored anyway, so the workflow doesn't apply.
+      if (!FSA_SUPPORTED) {
+        exportBtn?.classList.add('hidden');
+        restoreBtn?.classList.add('hidden');
+        return;
+      }
+
+      exportBtn?.addEventListener('click', exportFolderConfig);
+      restoreBtn?.addEventListener('click', () => restoreInput?.click());
+      restoreInput?.addEventListener('change', () => {
+        if (restoreInput.files && restoreInput.files[0]) {
+          importFolderConfig(restoreInput.files[0]);
+          restoreInput.value = ''; // reset so the same file can be re-loaded
+        }
+      });
     }
 
     // =========================================================
@@ -953,7 +1286,7 @@ remembered on next load. Chrome or Edge is recommended for persistence.</p>
       $('#status').textContent = 'Ready.';
       currentResult = null;
       updateSceneFilePanel();
-      // DSX folders are intentionally NOT cleared on "Clear" — they persist
+      // DSX folders and pending re-links are intentionally NOT cleared here
     });
 
     // =========================================================
@@ -985,7 +1318,9 @@ remembered on next load. Chrome or Edge is recommended for persistence.</p>
     updateSceneFilePanel();
     wireSceneFileDropZone();
     wireAddFolderButton();
-    renderFolderList(); // show empty state initially
+    wireBackupRestoreButtons();
+    renderFolderList();        // show empty state initially
+    renderPendingFolders();    // hidden until a backup is loaded
     restorePersistedFolders(); // async — populates list when IDB resolves
   </script>
 
