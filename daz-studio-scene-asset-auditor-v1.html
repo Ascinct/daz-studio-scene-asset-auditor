@@ -1,7 +1,6 @@
-<!doctype html>
-<html lang="en">
-
-<head>
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>DAZ Studio Scene Asset Auditor</title>
@@ -34,6 +33,11 @@
       --pill-text: #dce9ff;
       --pill-border: #304266;
       --card-shadow: none;
+      --folder-ok: #4ade80;
+      --folder-warn: #f7da82;
+      --folder-err: #ff8a9a;
+      --folder-item-bg: #1a2030;
+      --folder-item-border: #2e3a50;
     }
 
     body[data-theme="light"] {
@@ -63,11 +67,14 @@
       --pill-text: #1f2937;
       --pill-border: #dbe1ff;
       --card-shadow: 0 1px 5px rgba(0, 0, 0, .08);
+      --folder-ok: #16a34a;
+      --folder-warn: #b45309;
+      --folder-err: #dc2626;
+      --folder-item-bg: #f9fafb;
+      --folder-item-border: #e5e7eb;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -106,36 +113,14 @@
       white-space: nowrap;
     }
 
-    .theme-toggle:hover {
-      border-color: var(--accent);
-    }
+    .theme-toggle:hover { border-color: var(--accent); }
 
-    @media(max-width:640px) {
-      .header-inner {
-        flex-direction: column;
-      }
-    }
+    @media(max-width:640px) { .header-inner { flex-direction: column; } }
 
-    header h1 {
-      margin: 0 0 8px;
-      font-size: 28px;
-    }
-
-    header a {
-      color: var(--muted);
-      text-decoration: underline;
-    }
-
-    header a:hover {
-      color: var(--text);
-      text-decoration: none;
-    }
-
-    header div,
-    p {
-      color: var(--muted);
-      line-height: 1.45;
-    }
+    header h1 { margin: 0 0 8px; font-size: 28px; }
+    header a { color: var(--muted); text-decoration: underline; }
+    header a:hover { color: var(--text); text-decoration: none; }
+    header div, p { color: var(--muted); line-height: 1.45; }
 
     main {
       padding: 24px;
@@ -152,27 +137,11 @@
       box-shadow: var(--card-shadow);
     }
 
-    .card-body {
-      padding: 18px;
-    }
-
-    h1,
-    h2,
-    h3 {
-      margin-top: 0;
-    }
-
-    .muted {
-      color: var(--muted);
-    }
-
-    .small {
-      font-size: 13px;
-    }
-
-    .hidden {
-      display: none !important;
-    }
+    .card-body { padding: 18px; }
+    h1, h2, h3 { margin-top: 0; }
+    .muted { color: var(--muted); }
+    .small { font-size: 13px; }
+    .hidden { display: none !important; }
 
     .grid {
       display: grid;
@@ -180,11 +149,7 @@
       gap: 16px;
     }
 
-    @media(max-width:800px) {
-      .grid {
-        grid-template-columns: 1fr;
-      }
-    }
+    @media(max-width:800px) { .grid { grid-template-columns: 1fr; } }
 
     label {
       display: block;
@@ -220,9 +185,7 @@
       animation: warningBorderPulse .85s ease-out 1;
     }
 
-    #sceneFilePanel {
-      cursor: pointer;
-    }
+    #sceneFilePanel { cursor: pointer; }
 
     #sceneFilePanel.scene-drop-active {
       background: var(--scene-drop-bg);
@@ -231,26 +194,31 @@
     }
 
     @keyframes warningBorderPulse {
-      0% {
-        box-shadow: 0 0 0 0 rgba(255, 138, 154, .6);
-      }
-
-      70% {
-        box-shadow: 0 0 0 8px rgba(255, 138, 154, 0);
-      }
-
-      100% {
-        box-shadow: 0 0 0 0 rgba(255, 138, 154, 0);
-      }
+      0%   { box-shadow: 0 0 0 0   rgba(255, 138, 154, .6); }
+      70%  { box-shadow: 0 0 0 8px rgba(255, 138, 154, 0); }
+      100% { box-shadow: 0 0 0 0   rgba(255, 138, 154, 0); }
     }
 
-    input[type=file] {
-      width: 100%;
-      color: var(--muted);
+    input[type=file] { width: 100%; color: var(--muted); }
+
+    input[type=file]::file-selector-button {
+      display: inline-block;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 10px 16px;
+      margin-right: 10px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 400;
+      white-space: nowrap;
     }
 
-    .actions,
-    .output-toolbar {
+    input[type=file]::file-selector-button:hover { border-color: var(--accent); }
+
+    .actions, .output-toolbar {
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
@@ -271,9 +239,7 @@
       white-space: nowrap;
     }
 
-    button:hover {
-      border-color: var(--accent);
-    }
+    button:hover { border-color: var(--accent); }
 
     button.primary,
     .asset-toggle-btn[aria-expanded=true] {
@@ -282,22 +248,12 @@
       color: var(--text);
     }
 
-    button:disabled {
-      opacity: .45;
-      cursor: not-allowed;
-    }
+    button:disabled { opacity: .45; cursor: not-allowed; }
 
-    .summary-line strong {
-      font-weight: 800;
-      color: var(--text);
-    }
+    .summary-line strong { font-weight: 800; color: var(--text); }
+    .text-warning { color: var(--error-text); font-weight: 700; }
 
-    .text-warning {
-      color: var(--error-text);
-      font-weight: 700;
-    }
-
-    .accordion>summary {
+    .accordion > summary {
       list-style: none;
       cursor: pointer;
       padding: 18px;
@@ -309,9 +265,7 @@
       align-items: center;
     }
 
-    .accordion>summary::-webkit-details-marker {
-      display: none;
-    }
+    .accordion > summary::-webkit-details-marker { display: none; }
 
     .summary-meta {
       font-size: 13px;
@@ -320,9 +274,7 @@
       white-space: nowrap;
     }
 
-    .accordion-body {
-      padding: 0 18px 18px;
-    }
+    .accordion-body { padding: 0 18px 18px; }
 
     .sub-accordion {
       border: 1px solid var(--border);
@@ -332,7 +284,7 @@
       background: var(--panel-2);
     }
 
-    .sub-accordion>summary {
+    .sub-accordion > summary {
       list-style: none;
       cursor: pointer;
       padding: 14px 16px;
@@ -344,26 +296,18 @@
       align-items: center;
     }
 
-    .sub-accordion>summary::-webkit-details-marker {
-      display: none;
-    }
+    .sub-accordion > summary::-webkit-details-marker { display: none; }
 
     .sub-accordion-body {
       padding: 0 16px 16px;
       background: var(--panel);
     }
 
-    .sub-accordion-body .muted {
-      padding-top: 20px;
-    }
+    .sub-accordion-body .muted { padding-top: 20px; }
 
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
+    table { width: 100%; border-collapse: collapse; }
 
-    th,
-    td {
+    th, td {
       padding: 10px 12px;
       border-bottom: 1px solid var(--border);
       text-align: left;
@@ -377,9 +321,7 @@
       top: 0;
     }
 
-    tr:hover td {
-      background: var(--row-hover-bg);
-    }
+    tr:hover td { background: var(--row-hover-bg); }
 
     th.sortable {
       cursor: pointer;
@@ -388,38 +330,14 @@
       padding-right: 22px;
     }
 
-    th.sortable::after {
-      content: '↕';
-      position: absolute;
-      right: 8px;
-      color: var(--muted);
-      font-size: 11px;
-    }
+    th.sortable::after { content: '↕'; position: absolute; right: 8px; color: var(--muted); font-size: 11px; }
+    th.sortable.sort-asc::after  { content: '▲'; }
+    th.sortable.sort-desc::after { content: '▼'; }
 
-    th.sortable.sort-asc::after {
-      content: '▲';
-    }
-
-    th.sortable.sort-desc::after {
-      content: '▼';
-    }
-
-    .asset-detail-row {
-      display: none;
-    }
-
-    .asset-detail-row.is-open {
-      display: table-row;
-    }
-
-    .asset-detail-heading {
-      font-size: 15px;
-      font-weight: 400;
-    }
-
-    .asset-detail-cell {
-      background: var(--asset-detail-bg);
-    }
+    .asset-detail-row { display: none; }
+    .asset-detail-row.is-open { display: table-row; }
+    .asset-detail-heading { font-size: 15px; font-weight: 400; }
+    .asset-detail-cell { background: var(--asset-detail-bg); }
 
     .asset-detail-cell ul {
       column-count: 2;
@@ -432,15 +350,8 @@
       padding-right: 10px;
     }
 
-    .asset-detail-cell li.shared-asset code {
-      color: var(--warning-text);
-      font-weight: 700;
-    }
-
-    .asset-detail-cell li.common-base-asset code {
-      color: var(--muted);
-      opacity: .78;
-    }
+    .asset-detail-cell li.shared-asset code      { color: var(--warning-text); font-weight: 700; }
+    .asset-detail-cell li.common-base-asset code { color: var(--muted); opacity: .78; }
 
     .ignored-match-note {
       margin-top: 10px;
@@ -449,14 +360,9 @@
       display: none;
     }
 
-    @media(max-width:768px) {
-      .asset-detail-cell ul {
-        column-count: 1;
-      }
-    }
+    @media(max-width:768px) { .asset-detail-cell ul { column-count: 1; } }
 
-    code,
-    pre {
+    code, pre {
       color: var(--code-text);
       word-break: break-word;
       white-space: pre-wrap;
@@ -473,9 +379,7 @@
       color: var(--text);
     }
 
-    .filter::placeholder {
-      color: var(--muted);
-    }
+    .filter::placeholder { color: var(--muted); }
 
     .pill {
       display: inline-block;
@@ -497,16 +401,6 @@
       color: var(--muted);
     }
 
-    .remembered-folder {
-      margin-top: 8px;
-      font-size: 13px;
-    }
-
-    .remembered-folder strong {
-      font-weight: 800;
-      color: var(--text);
-    }
-
     .notice {
       background: var(--warning-bg);
       border: 1px solid var(--warning-border);
@@ -515,6 +409,183 @@
       color: var(--warning-text);
       margin: 16px 0;
     }
+
+    /* ── Folder list ── */
+    .folder-list {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      margin-bottom: 10px;
+    }
+
+    .folder-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      background: var(--folder-item-bg);
+      border: 1px solid var(--folder-item-border);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 13px;
+      min-width: 0;
+    }
+
+    .folder-status-icon {
+      font-size: 13px;
+      flex-shrink: 0;
+      width: 16px;
+      text-align: center;
+    }
+
+    .folder-status-ok   { color: var(--folder-ok); }
+    .folder-status-warn { color: var(--folder-warn); }
+    .folder-status-err  { color: var(--folder-err); }
+
+    .folder-item-name {
+      flex: 1;
+      font-weight: 600;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--text);
+    }
+
+    .folder-item-count {
+      flex-shrink: 0;
+      white-space: nowrap;
+    }
+
+    .folder-item-type {
+      flex-shrink: 0;
+      font-size: 11px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      color: var(--muted);
+    }
+
+    .folder-remove-btn {
+      flex-shrink: 0;
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1;
+      padding: 0 2px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .folder-remove-btn:hover {
+      color: var(--error-text);
+      border-color: transparent;
+    }
+
+    .folder-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-top: 4px;
+    }
+
+    .folder-empty-note {
+      font-size: 13px;
+      color: var(--muted);
+      margin: 0 0 8px;
+    }
+
+    .fsa-note {
+      font-size: 12px;
+      color: var(--muted);
+      margin: 6px 0 0;
+    }
+
+    .reconnect-note {
+      font-size: 13px;
+      color: var(--warning-text);
+      background: var(--warning-bg);
+      border: 1px solid var(--warning-border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      margin: 10px 0 10px;
+    }
+
+    /* ── Pending re-link list (shown after a backup file is loaded) ── */
+    .pending-folder-section {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px dashed var(--border);
+    }
+
+    .pending-folder-heading {
+      margin: 0 0 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .pending-folder-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      background: var(--folder-item-bg);
+      border: 1px dashed var(--folder-warn);
+      border-radius: 10px;
+      padding: 8px 12px;
+      font-size: 13px;
+      min-width: 0;
+      margin-bottom: 7px;
+    }
+
+    .pending-folder-item:last-child { margin-bottom: 0; }
+
+    .pending-locate-btn {
+      flex-shrink: 0;
+      font-size: 12px;
+      padding: 5px 12px;
+    }
+
+    .pending-folder-info {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .pending-folder-name-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      min-width: 0;
+    }
+
+    .pending-folder-path {
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .pending-folder-path code {
+      font-size: 11px;
+    }
+
+    .pending-notes {
+      margin: 0 0 10px;
+      padding: 9px 12px;
+      background: var(--folder-item-bg);
+      border: 1px solid var(--folder-item-border);
+      border-radius: 8px;
+      font-size: 12px;
+      color: var(--text);
+      white-space: pre-wrap;
+    }
+
+    .pending-notes-label {
+      font-weight: 700;
+      color: var(--muted);
+      margin-right: 6px;
+    }
   </style>
 </head>
 
@@ -522,42 +593,63 @@
   <header>
     <div class="header-inner">
       <div>
-        <h1>DAZ Studio Scene Asset Auditor</h1>
-        <div>Drop in a DAZ scene file and generate a shareable asset report from your browser. Developed by <a
-            href="https://www.ascinct.com">Ascinct</a>.</div>
+        <h1>DAZ Studio Scene Asset Auditor v1.1</h1>
+        <div>Drop in a DAZ scene file and generate a shareable asset report from your browser. Developed by <a href="https://www.ascinct.com/">Ascinct</a>.</div>
       </div>
       <button id="themeToggle" class="theme-toggle" type="button" aria-pressed="true">Dark mode</button>
     </div>
   </header>
   <main>
-    <details class="accordion card" open>
+    <details class="accordion card" open="">
       <summary><span>Create report</span><span></span><span>▾</span></summary>
       <div class="accordion-body">
-        <p class="muted">Select a <code>.duf</code> scene file. For exact product matching, also select your DAZ
-          <code>Runtime/Support</code> folder containing <code>.dsx</code> files.
+        <p class="muted">Select a <code>.duf</code> scene file. For exact product matching, also add your DAZ
+          <code>Runtime/Support</code> folder(s) containing <code>.dsx</code> files.
         </p>
         <div class="grid">
-          <div class="field selection-needed" id="sceneFilePanel"><label for="dufFile">Scene file</label>
-            <p class="muted small">Drop your .duf file here or choose a file from Windows Explorer</p>
+          <!-- Scene file panel -->
+          <div class="field selection-needed" id="sceneFilePanel">
+            <label for="dufFile">Scene file</label>
+            <p class="muted small">Drop your .duf file here or choose a file from your file manager.</p>
             <input id="dufFile" type="file" accept=".duf,.duf.gz,.gz">
           </div>
-          <div class="field selection-needed" id="dsxFolderPanel"><label for="dsxFolder">Optional DSX support
-              folder</label>
-            <p class="muted small">Choose the folder that contains DAZ <code>.dsx</code> support files, often
-              <code>Runtime/Support</code>.
-            </p>
-            <input id="dsxFolder" type="file" webkitdirectory directory multiple>
-            <p id="dsxLastFolderHint" class="muted remembered-folder hidden"></p>
+
+          <!-- DSX folder panel — multi-folder -->
+          <div class="field selection-needed" id="dsxFolderPanel">
+            <label>Optional DSX support folders</label>
+            <p class="muted small">Add one or more folders containing DAZ <code>.dsx</code> support files, typically <code>Runtime/Support</code>. Selected folders are remembered across sessions in Chrome/Edge.</p>
+            <div id="folderList" class="folder-list"><p class="folder-empty-note">No folders added yet.</p></div>
+            <p id="reconnectNote" class="reconnect-note hidden">Folders marked <span class="folder-status-warn">⚠</span> will reconnect when you click <strong>Generate report</strong>. Your browser will ask permission for each folder listed.</p>
+            <div class="folder-actions">
+              <button id="addFolderBtn" type="button">+ Add folder</button>
+              <button id="exportFoldersBtn" type="button">Backup folder list</button>
+              <button id="restoreFoldersBtn" type="button">Restore from backup</button>
+              <!-- hidden fallback input for browsers without File System Access API -->
+              <input id="dsxFolderFallback" type="file" webkitdirectory="" directory="" multiple="" class="hidden">
+              <!-- hidden file input for restoring a backup JSON -->
+              <input id="restoreFoldersInput" type="file" accept=".json,application/json" class="hidden">
+            </div>
+            <div id="pendingFolderSection" class="pending-folder-section hidden">
+              <p class="pending-folder-heading">Restored from backup. Click "Locate" beside each folder name to re-link it.</p>
+              <div id="pendingNotesDisplay" class="pending-notes hidden"></div>
+              <div id="pendingFolderList" class="folder-list"></div>
+            </div>
+            <p id="fsaNote" class="fsa-note hidden">Your browser doesn't
+support the File System Access API. Folders added this session won't be
+remembered on next load. Chrome or Edge is recommended for persistence.</p>
           </div>
         </div>
-        <div class="actions"><button id="runBtn" class="primary">Generate report</button><button
-            id="clearBtn">Clear</button></div>
+        <div class="actions">
+          <button id="runBtn" class="primary">Generate report</button>
+          <button id="clearBtn">Clear</button>
+        </div>
         <div id="status" class="status muted" style="margin-top:16px">Ready.</div>
       </div>
     </details>
 
     <section id="report" class="hidden"></section>
   </main>
+
   <script>
     const $ = sel => document.querySelector(sel);
     const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[ch]));
@@ -570,85 +662,18 @@
     function extractLikelyProducts(paths) { const map = new Map(); for (const p of paths) { const info = classifyPath(p); if (!info) continue; const key = `${info.vendor} / ${info.product}`; if (!map.has(key)) map.set(key, { vendor: info.vendor, product: info.product, sourceTypes: new Set(), confidence: info.confidence, paths: [] }); const e = map.get(key); e.sourceTypes.add(info.source); e.paths.push(p); if (e.confidence !== 'high' && info.confidence === 'high') e.confidence = 'high'; if (e.confidence === 'low' && info.confidence === 'medium') e.confidence = 'medium'; } return [...map.values()].map(e => ({ ...e, sourceTypes: [...e.sourceTypes].sort(), paths: uniqueSorted(e.paths) })).filter(e => !isImageOrTextureFileName(e.product)).sort((a, b) => `${a.vendor} ${a.product}`.localeCompare(`${b.vendor} ${b.product}`)); }
     function extractSceneNodeLabels(json) { const labels = []; const add = (node, area) => { if (!node || typeof node !== 'object') return; const label = node.label || node.name || node.id; if (!label || typeof label !== 'string') return; labels.push({ label: decodeDazPath(label).trim(), name: decodeDazPath(node.name || ''), id: decodeDazPath(node.id || ''), area }); }; if (Array.isArray(json.node_library)) json.node_library.forEach(n => add(n, 'node_library')); if (json.scene && Array.isArray(json.scene.nodes)) json.scene.nodes.forEach(n => add(n, 'scene.nodes')); const seen = new Set(); return labels.filter(i => { const k = `${i.area}|${i.label}|${i.id}`; if (seen.has(k)) return false; seen.add(k); return true; }); }
     function normaliseAssetPathForExactMatch(value) { let clean = decodeXmlEntities(decodeDazPath(String(value || ''))).replace(/\\/g, '/').split('#')[0].replace(/^file:/i, '').replace(/^\/+/, '').replace(/\/+/g, '/').trim().toLowerCase(); try { clean = decodeURIComponent(clean) } catch { } return clean; }
-    const COMMON_BASE_ASSET_PATHS = new Set([
-      'data/daz 3d/genesis 9/base/genesis9.dsf',
-      'data/daz 3d/genesis 8/female/genesis8female.dsf',
-      'data/daz 3d/genesis 8/male/genesis8male.dsf',
-      'data/daz 3d/genesis 8_1/female/genesis8_1female.dsf',
-      'data/daz 3d/genesis 8_1/male/genesis8_1male.dsf',
-      'data/daz 3d/genesis 3/female/genesis3female.dsf',
-      'data/daz 3d/genesis 3/male/genesis3male.dsf',
-      'data/daz 3d/genesis 2/female/genesis2female.dsf',
-      'data/daz 3d/genesis 2/male/genesis2male.dsf',
-      'data/daz 3d/genesis/base/genesis.dsf'
-    ]);
-    function isCommonBaseAssetPath(path) {
-      const p = normaliseAssetPathForExactMatch(path);
-      return COMMON_BASE_ASSET_PATHS.has(p) || /^data\/daz 3d\/genesis(?: [0-9](?:_[0-9])?)?\/[^/]+\/genesis(?:[0-9](?:_[0-9])?)?(?:female|male)?\.dsf$/i.test(p);
-    }
-    function getPathDisplayClass(path, sharedPaths = new Set()) {
-      if (isCommonBaseAssetPath(path)) return 'common-base-asset';
-      if (sharedPaths.has(path)) return 'shared-asset';
-      return '';
-    }
-    function renderAssetPathList(paths, sharedPaths = new Set()) {
-      return paths.map(p => {
-        const className = getPathDisplayClass(p, sharedPaths);
-        const classAttr = className ? ` class="${className}"` : '';
-        return `<li${classAttr}><code>${escapeHtml(p)}</code></li>`;
-      }).join('');
-    }
-    function extractInactiveModifierPaths(json) {
-      const ignored = [];
-      const walk = value => {
-        if (!value || typeof value !== 'object') return;
-        if (typeof value.url === 'string' && value.channel && Object.prototype.hasOwnProperty.call(value.channel, 'current_value')) {
-          const current = Number(value.channel.current_value);
-          if (Number.isFinite(current) && current === 0) ignored.push(normaliseAssetPathForExactMatch(value.url));
-        }
-        if (Array.isArray(value)) value.forEach(walk);
-        else Object.values(value).forEach(walk);
-      };
-      walk(json);
-      return uniqueSorted(ignored);
-    }
-    function filterInactiveModifierPaths(paths, inactivePaths) {
-      if (!inactivePaths || !inactivePaths.length) return paths;
-      const ignored = new Set(inactivePaths.map(normaliseAssetPathForExactMatch));
-      return paths.filter(p => !ignored.has(normaliseAssetPathForExactMatch(p)));
-    }
+    const COMMON_BASE_ASSET_PATHS = new Set(['data/daz 3d/genesis 9/base/genesis9.dsf','data/daz 3d/genesis 8/female/genesis8female.dsf','data/daz 3d/genesis 8/male/genesis8male.dsf','data/daz 3d/genesis 8_1/female/genesis8_1female.dsf','data/daz 3d/genesis 8_1/male/genesis8_1male.dsf','data/daz 3d/genesis 3/female/genesis3female.dsf','data/daz 3d/genesis 3/male/genesis3male.dsf','data/daz 3d/genesis 2/female/genesis2female.dsf','data/daz 3d/genesis 2/male/genesis2male.dsf','data/daz 3d/genesis/base/genesis.dsf']);
+    function isCommonBaseAssetPath(path) { const p = normaliseAssetPathForExactMatch(path); return COMMON_BASE_ASSET_PATHS.has(p) || /^data\/daz 3d\/genesis(?: [0-9](?:_[0-9])?)?\/[^/]+\/genesis(?:[0-9](?:_[0-9])?)?(?:female|male)?\.dsf$/i.test(p); }
+    function getPathDisplayClass(path, sharedPaths = new Set()) { if (isCommonBaseAssetPath(path)) return 'common-base-asset'; if (sharedPaths.has(path)) return 'shared-asset'; return ''; }
+    function renderAssetPathList(paths, sharedPaths = new Set()) { return paths.map(p => { const className = getPathDisplayClass(p, sharedPaths); const classAttr = className ? ` class="${className}"` : ''; return `<li${classAttr}><code>${escapeHtml(p)}</code></li>`; }).join(''); }
+    function extractInactiveModifierPaths(json) { const ignored = []; const walk = value => { if (!value || typeof value !== 'object') return; if (typeof value.url === 'string' && value.channel && Object.prototype.hasOwnProperty.call(value.channel, 'current_value')) { const current = Number(value.channel.current_value); if (Number.isFinite(current) && current === 0) ignored.push(normaliseAssetPathForExactMatch(value.url)); } if (Array.isArray(value)) value.forEach(walk); else Object.values(value).forEach(walk); }; walk(json); return uniqueSorted(ignored); }
+    function filterInactiveModifierPaths(paths, inactivePaths) { if (!inactivePaths || !inactivePaths.length) return paths; const ignored = new Set(inactivePaths.map(normaliseAssetPathForExactMatch)); return paths.filter(p => !ignored.has(normaliseAssetPathForExactMatch(p))); }
     function extractDsxValue(text, tag) { const m = new RegExp(`<${tag}\\s+VALUE="([^"]*)"`, 'i').exec(text); return m ? decodeXmlEntities(m[1]) : ''; }
     function extractDsxValues(text, tag) { const out = []; const rx = new RegExp(`<${tag}\\s+VALUE="([^"]*)"`, 'gi'); let m; while ((m = rx.exec(text)) !== null) out.push(decodeXmlEntities(m[1])); return out; }
     async function matchDsxFiles(rawAssetPaths, files) { const dsx = [...files].filter(f => f.name.toLowerCase().endsWith('.dsx')); const status = { enabled: dsx.length > 0, scannedFiles: dsx.length, indexedAssets: 0, matchedProducts: 0, message: 'DSX exact matching skipped.', matches: [] }; if (!dsx.length) { status.message = 'No DSX support folder selected. Exact product matching skipped.'; return status; } const sceneSet = new Set(rawAssetPaths.map(normaliseAssetPathForExactMatch).filter(Boolean)); const byFile = new Map(); for (let i = 0; i < dsx.length; i++) { if (i % 100 === 0) $('#status').textContent = `Scanning DSX files: ${i} of ${dsx.length}...`; let text = ''; try { text = await dsx[i].text() } catch { continue } const assets = uniqueSorted([...extractDsxValues(text, 'Asset'), ...extractDsxValues(text, 'SupportAsset'), ...extractDsxValues(text, 'ObjectCompatibility')].map(normaliseAssetPathForExactMatch)); status.indexedAssets += assets.length; const matched = assets.filter(a => sceneSet.has(a)); if (matched.length) { byFile.set(dsx[i].webkitRelativePath || dsx[i].name, { productName: extractDsxValue(text, 'Product') || dsx[i].name.replace(/\.dsx$/i, ''), storeId: extractDsxValue(text, 'StoreID'), productToken: extractDsxValue(text, 'ProductToken'), artists: extractDsxValues(text, 'Artist'), matchedPaths: matched }); } } status.matches = [...byFile.values()].sort((a, b) => b.matchedPaths.length - a.matchedPaths.length || a.productName.localeCompare(b.productName)); status.matchedProducts = status.matches.length; status.message = `DSX exact matching enabled. ${status.scannedFiles} .dsx files scanned, ${status.matchedProducts} product matches found.`; return status; }
-    function splitDsxMatchesBySpecificity(matches) {
-      const usage = new Map();
-      matches.forEach(m => m.matchedPaths.forEach(p => usage.set(p, (usage.get(p) || 0) + 1)));
-      const direct = [], possible = [], suppressedPossibleMatches = [];
-      matches.forEach(m => {
-        const unique = m.matchedPaths.filter(p => (usage.get(p) || 0) === 1);
-        const shared = m.matchedPaths.filter(p => (usage.get(p) || 0) > 1);
-        const specificShared = shared.filter(p => !isCommonBaseAssetPath(p));
-        const commonBaseShared = shared.filter(isCommonBaseAssetPath);
-        const e = {
-          ...m,
-          uniqueMatchedPaths: unique,
-          sharedMatchedPaths: shared,
-          specificSharedMatchedPaths: specificShared,
-          commonBaseMatchedPaths: commonBaseShared,
-          uniqueMatchCount: unique.length,
-          sharedMatchCount: shared.length,
-          specificSharedMatchCount: specificShared.length,
-          commonBaseMatchCount: commonBaseShared.length
-        };
-        if (unique.length) direct.push(e);
-        else if (specificShared.length) possible.push(e);
-        else suppressedPossibleMatches.push(e);
-      });
-      direct.sort((a, b) => b.uniqueMatchCount - a.uniqueMatchCount || b.matchedPaths.length - a.matchedPaths.length || a.productName.localeCompare(b.productName));
-      possible.sort((a, b) => b.specificSharedMatchCount - a.specificSharedMatchCount || a.productName.localeCompare(b.productName));
-      return { directMatches: direct, possibleMatches: possible, suppressedPossibleMatches };
-    }
+    function splitDsxMatchesBySpecificity(matches) { const usage = new Map(); matches.forEach(m => m.matchedPaths.forEach(p => usage.set(p, (usage.get(p) || 0) + 1))); const direct = [], possible = [], suppressedPossibleMatches = []; matches.forEach(m => { const unique = m.matchedPaths.filter(p => (usage.get(p) || 0) === 1); const shared = m.matchedPaths.filter(p => (usage.get(p) || 0) > 1); const specificShared = shared.filter(p => !isCommonBaseAssetPath(p)); const commonBaseShared = shared.filter(isCommonBaseAssetPath); const e = { ...m, uniqueMatchedPaths: unique, sharedMatchedPaths: shared, specificSharedMatchedPaths: specificShared, commonBaseMatchedPaths: commonBaseShared, uniqueMatchCount: unique.length, sharedMatchCount: shared.length, specificSharedMatchCount: specificShared.length, commonBaseMatchCount: commonBaseShared.length }; if (unique.length) direct.push(e); else if (specificShared.length) possible.push(e); else suppressedPossibleMatches.push(e); }); direct.sort((a, b) => b.uniqueMatchCount - a.uniqueMatchCount || b.matchedPaths.length - a.matchedPaths.length || a.productName.localeCompare(b.productName)); possible.sort((a, b) => b.specificSharedMatchCount - a.specificSharedMatchCount || a.productName.localeCompare(b.productName)); return { directMatches: direct, possibleMatches: possible, suppressedPossibleMatches }; }
     function isImageOrTextureFileName(name) { const p = String(name || '').toLowerCase().trim(); return /\.(jpg|jpeg|png|tif|tiff|bmp|exr|hdr)$/i.test(p) || /(^|[_\-\s])(basecolor|base_color|diffuse|albedo|normal|roughness|gloss|bump|opacity|alpha|metallic|specular|displacement|height)([_\-\s]|$)/i.test(p); }
+
     function buildReport(result) {
       const dsxGroups = splitDsxMatchesBySpecificity(result.dsxStatus.matches || []);
       const productRows = result.products.map(p => `<tr><td>${escapeHtml(p.vendor)}</td><td>${escapeHtml(p.product)}</td><td>${escapeHtml(p.confidence)}</td><td>${escapeHtml(p.sourceTypes.join(', '))}</td><td>${p.paths.length}</td></tr>`).join('');
@@ -657,175 +682,534 @@
       const ignoredInactiveCount = result.ignoredInactivePaths?.length || 0;
       const suppressedCommonCount = dsxGroups.suppressedPossibleMatches?.length || 0;
       const displayedDsxMatchCount = dsxGroups.directMatches.length + dsxGroups.possibleMatches.length;
-      const infoNotes = [
-        ignoredInactiveCount ? `${ignoredInactiveCount} zero-value modifier path${ignoredInactiveCount === 1 ? '' : 's'} excluded from matching.` : '',
-        suppressedCommonCount ? `${suppressedCommonCount} common base-only possible match${suppressedCommonCount === 1 ? '' : 'es'} suppressed.` : ''
-      ].filter(Boolean);
+      const infoNotes = [ignoredInactiveCount ? `${ignoredInactiveCount} zero-value modifier path${ignoredInactiveCount === 1 ? '' : 's'} excluded from matching.` : '', suppressedCommonCount ? `${suppressedCommonCount} common base-only possible match${suppressedCommonCount === 1 ? '' : 'es'} suppressed.` : ''].filter(Boolean);
       const noteMarkup = infoNotes.length ? `<p class="ignored-match-note">${escapeHtml(infoNotes.join(' '))}</p>` : '';
-      const dsxRows = dsxGroups.directMatches.map((m, i) => {
-        const id = `dsx-assets-${i}`;
-        const sharedSet = new Set(m.sharedMatchedPaths || []);
-        return `<tr><td><strong>${escapeHtml(m.productName)}</strong></td><td>${escapeHtml(m.productToken)}</td><td>${escapeHtml(m.artists.join(', '))}</td><td>${m.uniqueMatchCount}</td><td>${m.sharedMatchCount}</td><td><button class="asset-toggle-btn" data-target="${id}" aria-expanded="false">matched assets</button></td></tr><tr id="${id}" class="asset-detail-row"><td colspan="6" class="asset-detail-cell"><strong class="asset-detail-heading">Matched assets for ${escapeHtml(m.productName)}</strong><ul>${renderAssetPathList(m.matchedPaths, sharedSet)}</ul></td></tr>`;
-      }).join('');
-      const possibleRows = dsxGroups.possibleMatches.map((m, i) => {
-        const id = `possible-assets-${i}`;
-        const possibleDisplayPaths = [...(m.specificSharedMatchedPaths || []), ...(m.commonBaseMatchedPaths || [])];
-        return `<tr><td><strong>${escapeHtml(m.productName)}</strong></td><td>${escapeHtml(m.productToken)}</td><td>${escapeHtml(m.artists.join(', '))}</td><td>${m.specificSharedMatchCount}</td><td><button class="asset-toggle-btn" data-target="${id}" aria-expanded="false">matched assets</button></td></tr><tr id="${id}" class="asset-detail-row"><td colspan="5" class="asset-detail-cell"><strong class="asset-detail-heading">Matched assets for ${escapeHtml(m.productName)}</strong><ul>${renderAssetPathList(possibleDisplayPaths, new Set(m.specificSharedMatchedPaths || []))}</ul></td></tr>`;
-      }).join('');
+      const dsxRows = dsxGroups.directMatches.map((m, i) => { const id = `dsx-assets-${i}`; const sharedSet = new Set(m.sharedMatchedPaths || []); return `<tr><td><strong>${escapeHtml(m.productName)}</strong></td><td>${escapeHtml(m.productToken)}</td><td>${escapeHtml(m.artists.join(', '))}</td><td>${m.uniqueMatchCount}</td><td>${m.sharedMatchCount}</td><td><button class="asset-toggle-btn" data-target="${id}" aria-expanded="false">matched assets</button></td></tr><tr id="${id}" class="asset-detail-row"><td colspan="6" class="asset-detail-cell"><strong class="asset-detail-heading">Matched assets for ${escapeHtml(m.productName)}</strong><ul>${renderAssetPathList(m.matchedPaths, sharedSet)}</ul></td></tr>`; }).join('');
+      const possibleRows = dsxGroups.possibleMatches.map((m, i) => { const id = `possible-assets-${i}`; const possibleDisplayPaths = [...(m.specificSharedMatchedPaths || []), ...(m.commonBaseMatchedPaths || [])]; return `<tr><td><strong>${escapeHtml(m.productName)}</strong></td><td>${escapeHtml(m.productToken)}</td><td>${escapeHtml(m.artists.join(', '))}</td><td>${m.specificSharedMatchCount}</td><td><button class="asset-toggle-btn" data-target="${id}" aria-expanded="false">matched assets</button></td></tr><tr id="${id}" class="asset-detail-row"><td colspan="5" class="asset-detail-cell"><strong class="asset-detail-heading">Matched assets for ${escapeHtml(m.productName)}</strong><ul>${renderAssetPathList(possibleDisplayPaths, new Set(m.specificSharedMatchedPaths || []))}</ul></td></tr>`; }).join('');
       const dsxSummaryMessage = escapeHtml(result.dsxStatus.message.replace(/,?\s*\d+\s+product matches found\.?/i, '.'));
       const dsxSummaryClass = result.dsxStatus.enabled ? '' : ' class="text-warning"';
-      return `<section class="card"><div class="card-body"><h2>Summary</h2><p><strong>DSX exact matching:</strong> <span${dsxSummaryClass}>${dsxSummaryMessage}</span></p><p class="muted summary-line"><strong>${displayedDsxMatchCount}</strong> displayed DSX product matches, <strong>${result.products.length}</strong> likely products, <strong>${result.sceneNodeLabels.length}</strong> scene node labels, <strong>${result.assetPaths.length}</strong> raw asset paths.</p>${noteMarkup}<div class="output-toolbar"><button id="downloadHtml">Download HTML report</button><button id="downloadTitles">Export product titles</button></div></div></section><details class="accordion card" open><summary><span>Exact product matches</span><span class="summary-meta">${dsxGroups.directMatches.length} direct, ${dsxGroups.possibleMatches.length} possible</span><span>▾</span></summary><div class="accordion-body"><input class="filter" data-table="dsxTable" placeholder="Filter exact matches..."><table id="dsxTable" class="sortable-table"><thead><tr><th>Product</th><th>Token</th><th>Artists</th><th>Unique matched paths</th><th>Shared matched paths</th><th>Matched assets</th></tr></thead><tbody>${dsxRows || '<tr><td colspan="6" class="muted">No exact product matches found.</td></tr>'}</tbody></table><details class="sub-accordion"><summary><span>Possible match</span><span class="summary-meta">${dsxGroups.possibleMatches.length} found ▾</span></summary><div class="sub-accordion-body"><p class="muted">Products matched shared assets other than common base figure files. Shared morphs are highlighted.</p><table id="possibleTable" class="sortable-table"><thead><tr><th>Product</th><th>Token</th><th>Artists</th><th>Specific shared paths</th><th>Matched assets</th></tr></thead><tbody>${possibleRows || '<tr><td colspan="5" class="muted">No possible matches found.</td></tr>'}</tbody></table></div></details></div></details><details class="accordion card"><summary><span>Likely products</span><span class="summary-meta">${result.products.length} found</span><span>▾</span></summary><div class="accordion-body"><input class="filter" data-table="productTable" placeholder="Filter products..."><table id="productTable" class="sortable-table"><thead><tr><th>Vendor</th><th>Product / asset folder</th><th>Confidence</th><th>Source</th><th>Paths</th></tr></thead><tbody>${productRows}</tbody></table></div></details><details class="accordion card"><summary><span>Scene node labels</span><span class="summary-meta">${result.sceneNodeLabels.length} found</span><span>▾</span></summary><div class="accordion-body"><input class="filter" data-table="labelTable" placeholder="Filter node labels..."><table id="labelTable" class="sortable-table"><thead><tr><th>Label</th><th>Name</th><th>ID</th><th>Area</th></tr></thead><tbody>${labelRows}</tbody></table></div></details><details class="accordion card"><summary><span>Raw asset paths</span><span class="summary-meta">${result.assetPaths.length} found</span><span>▾</span></summary><div class="accordion-body"><input class="filter" data-table="assetTable" placeholder="Filter raw paths..."><table id="assetTable" class="sortable-table"><thead><tr><th>#</th><th>Raw asset path</th></tr></thead><tbody>${assetRows}</tbody></table></div></details>`;
+      return `<section class="card"><div class="card-body"><h2>Summary</h2><p><strong>DSX exact matching:</strong> <span${dsxSummaryClass}>${dsxSummaryMessage}</span></p><p class="muted summary-line"><strong>${displayedDsxMatchCount}</strong> displayed DSX product matches, <strong>${result.products.length}</strong> likely products, <strong>${result.sceneNodeLabels.length}</strong> scene node labels, <strong>${result.assetPaths.length}</strong> raw asset paths.</p>${noteMarkup}<div class="output-toolbar"><button id="downloadHtml">Download HTML report</button><button id="downloadTitles">Export product titles</button></div></div></section><details class="accordion card" open><summary><span>Exact product matches</span><span class="summary-meta">${dsxGroups.directMatches.length} direct, ${dsxGroups.possibleMatches.length} possible</span><span>▾</span></summary><div class="accordion-body"><input class="filter" data-table="dsxTable" placeholder="Filter exact matches..."><table id="dsxTable" class="sortable-table"><thead><tr><th>Product</th><th>Token</th><th>Artists</th><th>Unique matched paths</th><th>Shared matched paths</th><th>Matched assets</th></tr></thead><tbody>${dsxRows || '<tr><td colspan="6" class="muted">No exact product matches found.</td></tr>'}</tbody></table><details class="sub-accordion"><summary><span>Possible match</span><span class="summary-meta">${dsxGroups.possibleMatches.length} found ▾</span></summary><div class="sub-accordion-body"><p class="muted">Products matched shared assets. Shared morphs are highlighted.</p><table id="possibleTable" class="sortable-table"><thead><tr><th>Product</th><th>Token</th><th>Artists</th><th>Specific shared paths</th><th>Matched assets</th></tr></thead><tbody>${possibleRows || '<tr><td colspan="5" class="muted">No possible matches found.</td></tr>'}</tbody></table></div></details></div></details><details class="accordion card"><summary><span>Likely products</span><span class="summary-meta">${result.products.length} found</span><span>▾</span></summary><div class="accordion-body"><input class="filter" data-table="productTable" placeholder="Filter products..."><table id="productTable" class="sortable-table"><thead><tr><th>Vendor</th><th>Product / asset folder</th><th>Confidence</th><th>Source</th><th>Paths</th></tr></thead><tbody>${productRows}</tbody></table></div></details><details class="accordion card"><summary><span>Scene node labels</span><span class="summary-meta">${result.sceneNodeLabels.length} found</span><span>▾</span></summary><div class="accordion-body"><input class="filter" data-table="labelTable" placeholder="Filter node labels..."><table id="labelTable" class="sortable-table"><thead><tr><th>Label</th><th>Name</th><th>ID</th><th>Area</th></tr></thead><tbody>${labelRows}</tbody></table></div></details><details class="accordion card"><summary><span>Raw asset paths</span><span class="summary-meta">${result.assetPaths.length} found</span><span>▾</span></summary><div class="accordion-body"><input class="filter" data-table="assetTable" placeholder="Filter raw paths..."><table id="assetTable" class="sortable-table"><thead><tr><th>#</th><th>Raw asset path</th></tr></thead><tbody>${assetRows}</tbody></table></div></details>`;
     }
-    function getSceneTitleFromFileName(fileName) {
-      return String(fileName || 'daz-scene')
-        .replace(/\.duf\.gz$/i, '')
-        .replace(/\.duf$/i, '')
-        .replace(/\.gz$/i, '')
-        .trim() || 'daz-scene';
-    }
-    function sanitiseDownloadFileName(value) {
-      return String(value || 'daz-scene')
-        .replace(/[\\/:*?"<>|]+/g, '-')
-        .replace(/\s+/g, ' ')
-        .trim() || 'daz-scene';
-    }
-    function getSceneDownloadBaseName(result) {
-      return sanitiseDownloadFileName(getSceneTitleFromFileName(result?.inputFile));
-    }
+
+    function getSceneTitleFromFileName(fileName) { return String(fileName || 'daz-scene').replace(/\.duf\.gz$/i, '').replace(/\.duf$/i, '').replace(/\.gz$/i, '').trim() || 'daz-scene'; }
+    function sanitiseDownloadFileName(value) { return String(value || 'daz-scene').replace(/[\\/:*?"<>|]+/g, '-').replace(/\s+/g, ' ').trim() || 'daz-scene'; }
+    function getSceneDownloadBaseName(result) { return sanitiseDownloadFileName(getSceneTitleFromFileName(result?.inputFile)); }
+
     function makeTextTitles(result) {
       const groups = splitDsxMatchesBySpecificity(result.dsxStatus.matches || []);
       const exactTitles = groups.directMatches.map(m => m.productName).filter(Boolean).sort((a, b) => a.localeCompare(b));
       const possibleTitles = groups.possibleMatches.map(m => m.productName).filter(Boolean).sort((a, b) => a.localeCompare(b));
       const lines = [];
-      lines.push('Exact product matches');
-      lines.push('=====================');
-      lines.push(exactTitles.length ? `${exactTitles.length} found` : '0 found');
-      lines.push('');
-      lines.push(...(exactTitles.length ? exactTitles : ['No exact product matches found.']));
-      lines.push('');
-      lines.push('Possible match products');
-      lines.push('=======================');
-      lines.push(possibleTitles.length ? `${possibleTitles.length} found` : '0 found');
-      lines.push('');
+      lines.push('Exact product matches'); lines.push('=====================');
+      lines.push(exactTitles.length ? `${exactTitles.length} found` : '0 found'); lines.push('');
+      lines.push(...(exactTitles.length ? exactTitles : ['No exact product matches found.'])); lines.push('');
+      lines.push('Possible match products'); lines.push('=======================');
+      lines.push(possibleTitles.length ? `${possibleTitles.length} found` : '0 found'); lines.push('');
       lines.push(...(possibleTitles.length ? possibleTitles : ['No possible match products found.']));
       return lines.join('\n');
     }
+
     function download(name, content, type = 'text/plain') { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([content], { type })); a.download = name; a.click(); URL.revokeObjectURL(a.href); }
+
+    // =========================================================
+    // Theme
+    // =========================================================
     const THEME_KEY = 'dazSceneAssetExtractor.theme';
     function applyTheme(theme) {
       const selectedTheme = theme === 'light' ? 'light' : 'dark';
       document.body.dataset.theme = selectedTheme;
       const toggle = document.getElementById('themeToggle');
-      if (toggle) {
-        const isDark = selectedTheme === 'dark';
-        toggle.textContent = isDark ? 'Dark mode' : 'Light mode';
-        toggle.setAttribute('aria-pressed', String(isDark));
-      }
+      if (toggle) { const isDark = selectedTheme === 'dark'; toggle.textContent = isDark ? 'Dark mode' : 'Light mode'; toggle.setAttribute('aria-pressed', String(isDark)); }
       try { localStorage.setItem(THEME_KEY, selectedTheme); } catch { }
     }
     function initialiseThemeToggle() {
-      let savedTheme = 'dark';
-      try { savedTheme = localStorage.getItem(THEME_KEY) || 'dark'; } catch { }
+      let savedTheme = 'dark'; try { savedTheme = localStorage.getItem(THEME_KEY) || 'dark'; } catch { }
       applyTheme(savedTheme);
-      document.getElementById('themeToggle')?.addEventListener('click', () => {
-        applyTheme(document.body.dataset.theme === 'dark' ? 'light' : 'dark');
+      document.getElementById('themeToggle')?.addEventListener('click', () => { applyTheme(document.body.dataset.theme === 'dark' ? 'light' : 'dark'); });
+    }
+
+    // =========================================================
+    // IndexedDB — persist FSA directory handles across sessions
+    // =========================================================
+    const IDB_NAME = 'dazAuditorV2';
+    const IDB_STORE = 'folderHandles';
+    let _idb = null;
+
+    function openIDB() {
+      if (_idb) return Promise.resolve(_idb);
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(IDB_NAME, 1);
+        req.onupgradeneeded = e => e.target.result.createObjectStore(IDB_STORE, { keyPath: 'id' });
+        req.onsuccess = e => { _idb = e.target.result; resolve(_idb); };
+        req.onerror = e => reject(e.target.error);
       });
     }
 
-    let currentResult = null;
-    const DSX_LAST_FOLDER_KEY = 'dazSceneAssetExtractor.lastDsxSupportFolder';
-
-    function getFolderNameFromSelection(input) {
-      const files = input?.files ? Array.from(input.files) : [];
-      if (!files.length) return '';
-      const firstPath = files[0].webkitRelativePath || files[0].name || '';
-      if (firstPath.includes('/')) return firstPath.split('/')[0];
-      return files.length === 1 ? files[0].name : 'Selected support folder';
+    async function idbPut(record) {
+      try { const db = await openIDB(); await new Promise((res, rej) => { const tx = db.transaction(IDB_STORE, 'readwrite'); const req = tx.objectStore(IDB_STORE).put(record); req.onsuccess = res; req.onerror = rej; }); } catch { }
     }
-    function setDsxLastFolderHint(text, mode = 'last') {
-      const hint = document.getElementById('dsxLastFolderHint');
-      if (!hint) return;
-      if (!text) {
-        hint.classList.add('hidden');
-        hint.textContent = '';
+
+    async function idbDelete(id) {
+      try { const db = await openIDB(); await new Promise((res, rej) => { const tx = db.transaction(IDB_STORE, 'readwrite'); const req = tx.objectStore(IDB_STORE).delete(id); req.onsuccess = res; req.onerror = rej; }); } catch { }
+    }
+
+    async function idbGetAll() {
+      try {
+        const db = await openIDB();
+        return new Promise((resolve) => {
+          const tx = db.transaction(IDB_STORE, 'readonly');
+          const req = tx.objectStore(IDB_STORE).getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => resolve([]);
+        });
+      } catch { return []; }
+    }
+
+    // =========================================================
+    // File System Access API helpers
+    // =========================================================
+    const FSA_SUPPORTED = 'showDirectoryPicker' in window;
+
+    async function* walkDirHandle(dirHandle) {
+      for await (const [, entry] of dirHandle.entries()) {
+        if (entry.kind === 'file') {
+          try { yield await entry.getFile(); } catch { /* skip unreadable */ }
+        } else if (entry.kind === 'directory') {
+          yield* walkDirHandle(entry);
+        }
+      }
+    }
+
+    // =========================================================
+    // Multi-folder state
+    // =========================================================
+    // Each entry: { id, name, type: 'fsa'|'legacy', handle?, legacyFiles?, fileCount: number|null, status: 'ready'|'needs-permission'|'denied'|'error' }
+    let dsxFolderEntries = [];
+
+    function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+
+    function renderFolderList() {
+      const container = document.getElementById('folderList');
+      if (!container) return;
+
+      // Update panel appearance
+      const panel = document.getElementById('dsxFolderPanel');
+      if (panel) {
+        const hasEntries = dsxFolderEntries.length > 0;
+        panel.classList.toggle('selection-made', hasEntries);
+        panel.classList.toggle('selection-needed', !hasEntries);
+        panel.classList.remove('selection-warning', 'selection-warning-pulse');
+      }
+
+      // Show "will reconnect" hint when restored folders are awaiting permission
+      const reconnectNote = document.getElementById('reconnectNote');
+      if (reconnectNote) {
+        const anyNeedsPermission = FSA_SUPPORTED && dsxFolderEntries.some(e => e.status === 'needs-permission');
+        reconnectNote.classList.toggle('hidden', !anyNeedsPermission);
+      }
+
+      if (!dsxFolderEntries.length) {
+        container.innerHTML = '<p class="folder-empty-note">No folders added yet.</p>';
         return;
       }
-      if (mode === 'selected') {
-        hint.innerHTML = `<strong>Selected folder:</strong> ${escapeHtml(text)}`;
-      } else {
-        hint.innerHTML = `<strong>Last used:</strong> ${escapeHtml(text)}<br><span class="muted">Click &quot;Browse&quot; to reselect the last used support folder.</span>`;
-      }
-      hint.classList.remove('hidden');
-    }
-    function loadRememberedDsxFolderHint() {
-      try {
-        const remembered = localStorage.getItem(DSX_LAST_FOLDER_KEY);
-        if (remembered) setDsxLastFolderHint(remembered, 'last');
-      } catch { }
-    }
-    function rememberDsxFolderSelection() {
-      const input = document.getElementById('dsxFolder');
-      const folderName = getFolderNameFromSelection(input);
-      if (!folderName) return;
-      try { localStorage.setItem(DSX_LAST_FOLDER_KEY, folderName); } catch { }
-      setDsxLastFolderHint(folderName, 'selected');
+
+      container.innerHTML = dsxFolderEntries.map(entry => {
+        let icon, cls, countText, typeBadge;
+
+        if (entry.status === 'ready') { icon = '✓'; cls = 'folder-status-ok'; }
+        else if (entry.status === 'needs-permission') { icon = '⚠'; cls = 'folder-status-warn'; }
+        else { icon = '✗'; cls = 'folder-status-err'; }
+
+        countText = entry.fileCount !== null ? `${entry.fileCount} .dsx` : '';
+        typeBadge = entry.type === 'fsa'
+          ? '<span class="folder-item-type">persistent</span>'
+          : '<span class="folder-item-type">session</span>';
+
+        const statusTitle = entry.status === 'needs-permission'
+          ? ' title="Permission needed. Will be requested when you generate the report."'
+          : '';
+
+        return `<div class="folder-item"${statusTitle}>
+          <span class="${cls} folder-status-icon">${icon}</span>
+          <span class="folder-item-name">${escapeHtml(entry.name)}</span>
+          ${countText ? `<span class="folder-item-count muted small">${escapeHtml(countText)}</span>` : ''}
+          ${typeBadge}
+          <button class="folder-remove-btn" data-id="${escapeHtml(entry.id)}" title="Remove folder" type="button">×</button>
+        </div>`;
+      }).join('');
+
+      container.querySelectorAll('.folder-remove-btn').forEach(btn => {
+        btn.addEventListener('click', () => removeFolderEntry(btn.dataset.id));
+      });
     }
 
-    function updateSelectionPanel(inputId, panelId) {
-      const input = document.getElementById(inputId);
-      const panel = document.getElementById(panelId);
+    async function addFsaFolder() {
+      let handle;
+      try {
+        handle = await window.showDirectoryPicker({ mode: 'read' });
+      } catch (e) {
+        if (e.name !== 'AbortError') $('#status').textContent = 'Could not open folder picker: ' + e.message;
+        return;
+      }
+      // Check for duplicates by name (best effort. Handles aren't directly comparable.)
+      const duplicate = dsxFolderEntries.find(e => e.type === 'fsa' && e.name === handle.name);
+      if (duplicate) {
+        $('#status').textContent = `Folder "${handle.name}" is already in the list.`;
+        return;
+      }
+      const id = genId();
+      const entry = { id, name: handle.name, type: 'fsa', handle, fileCount: null, status: 'ready' };
+      dsxFolderEntries.push(entry);
+      renderFolderList();
+      await idbPut({ id, name: handle.name, handle });
+      // Count .dsx files in background (non-blocking)
+      countDsxFilesForEntry(entry);
+    }
+
+    function addLegacyFolder(files) {
+      const fileArray = Array.from(files).filter(f => f.name.toLowerCase().endsWith('.dsx'));
+      if (!fileArray.length) { $('#status').textContent = 'No .dsx files found in the selected folder.'; return; }
+      const firstPath = files[0].webkitRelativePath || files[0].name || '';
+      const name = firstPath.includes('/') ? firstPath.split('/')[0] : 'Selected folder';
+      const duplicate = dsxFolderEntries.find(e => e.type === 'legacy' && e.name === name);
+      if (duplicate) {
+        // Replace the existing entry for the same folder name
+        duplicate.legacyFiles = fileArray;
+        duplicate.fileCount = fileArray.length;
+        renderFolderList();
+        return;
+      }
+      const id = genId();
+      const entry = { id, name, type: 'legacy', handle: null, legacyFiles: fileArray, fileCount: fileArray.length, status: 'ready' };
+      dsxFolderEntries.push(entry);
+      renderFolderList();
+    }
+
+    async function removeFolderEntry(id) {
+      dsxFolderEntries = dsxFolderEntries.filter(e => e.id !== id);
+      await idbDelete(id);
+      renderFolderList();
+    }
+
+    async function countDsxFilesForEntry(entry) {
+      if (entry.type !== 'fsa' || !entry.handle) return;
+      let count = 0;
+      try {
+        for await (const file of walkDirHandle(entry.handle)) {
+          if (file.name.toLowerCase().endsWith('.dsx')) count++;
+        }
+        entry.fileCount = count;
+        renderFolderList();
+      } catch { /* permission not yet granted. Will be counted during report run. */ }
+    }
+
+    // Collect all DSX File objects from all folder entries.
+    // Must be called from a user-gesture context so requestPermission works.
+    async function getAllDsxFiles() {
+      const allFiles = [];
+      for (const entry of dsxFolderEntries) {
+        if (entry.type === 'fsa' && entry.handle) {
+          try {
+            const perm = await entry.handle.requestPermission({ mode: 'read' });
+            if (perm === 'granted') {
+              entry.status = 'ready';
+              let count = 0;
+              for await (const file of walkDirHandle(entry.handle)) {
+                if (file.name.toLowerCase().endsWith('.dsx')) { allFiles.push(file); count++; }
+              }
+              entry.fileCount = count;
+            } else {
+              entry.status = perm === 'denied' ? 'denied' : 'needs-permission';
+            }
+          } catch (e) {
+            entry.status = 'error';
+          }
+        } else if (entry.type === 'legacy' && entry.legacyFiles) {
+          allFiles.push(...entry.legacyFiles);
+        }
+      }
+      renderFolderList();
+      return allFiles;
+    }
+
+    // Restore persisted FSA handles from IndexedDB on page load
+    async function restorePersistedFolders() {
+      if (!FSA_SUPPORTED) {
+        const note = document.getElementById('fsaNote');
+        if (note) { note.textContent = 'Your browser doesn\'t support the File System Access API. Folders added this session won\'t be remembered on next load. Chrome or Edge is recommended for persistence.'; note.classList.remove('hidden'); }
+        return;
+      }
+      let stored = [];
+      try { stored = await idbGetAll(); } catch { return; }
+      if (!stored.length) return;
+
+      for (const record of stored) {
+        if (!record.handle || !record.id) continue;
+        // Avoid duplicates (shouldn't happen but be safe)
+        if (dsxFolderEntries.find(e => e.id === record.id)) continue;
+        let status = 'needs-permission';
+        try {
+          const perm = await record.handle.queryPermission({ mode: 'read' });
+          status = perm === 'granted' ? 'ready' : 'needs-permission';
+        } catch { status = 'error'; }
+        const entry = { id: record.id, name: record.name || record.handle.name, type: 'fsa', handle: record.handle, legacyFiles: null, fileCount: null, status };
+        dsxFolderEntries.push(entry);
+        // Count in background only if already granted
+        if (status === 'ready') countDsxFilesForEntry(entry);
+      }
+      renderFolderList();
+    }
+
+    // =========================================================
+    // Backup / Restore — folder bookmarks as a portable JSON file
+    // =========================================================
+    // Browsers don't expose real folder paths to web pages, so a backup
+    // file can only store folder NAMES and metadata. On restore, the user
+    // must re-pick each folder via the directory picker. This works after
+    // a full browser cache wipe, on a different profile, or a different
+    // machine, as long as the same folder names exist on disk.
+    //
+    // Backup file shape:
+    //   { version: 1, app: '...', exportedAt: ISO, folders: [{ id, name, type, fileCount }] }
+    //
+    // Only 'fsa' entries are restorable. 'legacy' entries (browsers without
+    // the File System Access API) are session-only and not included.
+
+    let pendingFolders = [];
+
+    function exportFolderConfig() {
+      const fsaEntries = dsxFolderEntries.filter(e => e.type === 'fsa');
+      if (!fsaEntries.length) {
+        $('#status').textContent = 'No persistent folders to back up. Add at least one folder first.';
+        return;
+      }
+      const data = {
+        _readme: 'Optional: open this file in a text editor and paste your real folder paths into each folder\'s "path" field, and any general comments into the top-level "notes" field. Paste Windows paths exactly as they are (e.g. D:\\Programs\\Daz Studio\\...) - the app cleans them up on import. Browsers cannot use these strings to auto-open folders, but the app shows them next to each folder name on restore so you know which folder to re-pick.',
+        version: 1,
+        app: 'daz-studio-scene-asset-auditor',
+        exportedAt: new Date().toISOString(),
+        notes: '',
+        folders: fsaEntries.map(e => ({
+          id: e.id,
+          name: e.name,
+          type: e.type,
+          fileCount: e.fileCount,
+          path: ''
+        }))
+      };
+      const stamp = new Date().toISOString().slice(0, 10);
+      download(`daz-auditor-folder-backup-${stamp}.json`, JSON.stringify(data, null, 2), 'application/json');
+      $('#status').textContent = `Backed up ${data.folders.length} folder${data.folders.length === 1 ? '' : 's'}. Open the file in a text editor to add your folder paths and notes.`;
+    }
+
+    // Lenient JSON parser. Tries strict JSON.parse first; if that fails,
+    // auto-escapes any backslashes that aren't already part of a valid JSON
+    // escape sequence (\", \\, \/, \b, \f, \n, \r, \t, \u). This means users
+    // can paste raw Windows paths like "D:\Programs\Daz Studio\..." into the
+    // path/notes fields without having to escape every backslash by hand.
+    function parseJsonLenient(text) {
+      try {
+        return JSON.parse(text);
+      } catch (initialError) {
+        const fixed = String(text).replace(/\\(?!["\\/bfnrtu])/g, '\\\\');
+        try {
+          return JSON.parse(fixed);
+        } catch {
+          throw initialError; // surface the original parse error to the user
+        }
+      }
+    }
+
+    async function importFolderConfig(file) {
+      if (!file) return;
+      if (!FSA_SUPPORTED) {
+        $('#status').textContent = 'Restore requires Chrome or Edge (File System Access API).';
+        return;
+      }
+      let data;
+      try {
+        data = parseJsonLenient(await file.text());
+      } catch (e) {
+        $('#status').textContent = 'Could not parse backup file: ' + e.message;
+        return;
+      }
+      if (!data || !Array.isArray(data.folders)) {
+        $('#status').textContent = 'Backup file is not in the expected format.';
+        return;
+      }
+
+      // Display top-level notes if present (otherwise hide the notes block)
+      const notesEl = document.getElementById('pendingNotesDisplay');
+      const topNotes = typeof data.notes === 'string' ? data.notes.trim() : '';
+      if (notesEl) {
+        if (topNotes) {
+          notesEl.innerHTML = `<span class="pending-notes-label">Notes:</span>${escapeHtml(topNotes)}`;
+          notesEl.classList.remove('hidden');
+        } else {
+          notesEl.innerHTML = '';
+          notesEl.classList.add('hidden');
+        }
+      }
+
+      // Skip names that are already in the active folder list
+      const activeFsaNames = new Set(dsxFolderEntries.filter(e => e.type === 'fsa').map(e => e.name));
+      const incoming = data.folders
+        .filter(f => f && f.name && (!f.type || f.type === 'fsa'))
+        .filter(f => !activeFsaNames.has(f.name));
+
+      // Merge with anything still pending (avoid duplicate names)
+      const pendingNames = new Set(pendingFolders.map(p => p.name));
+      const additions = incoming
+        .filter(f => !pendingNames.has(f.name))
+        .map(f => ({
+          id: f.id || genId(),
+          name: f.name,
+          expectedFileCount: typeof f.fileCount === 'number' ? f.fileCount : null,
+          path: typeof f.path === 'string' ? f.path.trim() : ''
+        }));
+      pendingFolders = pendingFolders.concat(additions);
+      renderPendingFolders();
+
+      const skipped = data.folders.length - additions.length;
+      if (additions.length === 0) {
+        $('#status').textContent = `Backup loaded. No new folders to restore (${skipped} already present or duplicate).`;
+      } else {
+        const skipMsg = skipped > 0 ? ` (${skipped} already present or duplicate)` : '';
+        $('#status').textContent = `${additions.length} folder${additions.length === 1 ? '' : 's'} pending re-link${skipMsg}. Click "Locate" beside each name.`;
+      }
+    }
+
+    function renderPendingFolders() {
+      const section = document.getElementById('pendingFolderSection');
+      const container = document.getElementById('pendingFolderList');
+      if (!section || !container) return;
+      if (!pendingFolders.length) {
+        section.classList.add('hidden');
+        container.innerHTML = '';
+        const notesEl = document.getElementById('pendingNotesDisplay');
+        if (notesEl) { notesEl.innerHTML = ''; notesEl.classList.add('hidden'); }
+        return;
+      }
+      section.classList.remove('hidden');
+      container.innerHTML = pendingFolders.map(p => `
+        <div class="pending-folder-item">
+          <span class="folder-status-warn folder-status-icon">⚠</span>
+          <div class="pending-folder-info">
+            <div class="pending-folder-name-row">
+              <span class="folder-item-name">${escapeHtml(p.name)}</span>
+              ${p.expectedFileCount !== null ? `<span class="folder-item-count muted small">~${escapeHtml(String(p.expectedFileCount))} .dsx expected</span>` : ''}
+            </div>
+            ${p.path ? `<div class="pending-folder-path"><code>${escapeHtml(p.path)}</code></div>` : ''}
+          </div>
+          <button class="pending-locate-btn primary" data-action="locate" data-id="${escapeHtml(p.id)}" type="button">Locate</button>
+          <button class="folder-remove-btn" data-action="dismiss" data-id="${escapeHtml(p.id)}" title="Remove from pending list" type="button">×</button>
+        </div>
+      `).join('');
+      container.querySelectorAll('button[data-action="locate"]').forEach(btn => {
+        btn.addEventListener('click', () => relinkPendingFolder(btn.dataset.id));
+      });
+      container.querySelectorAll('button[data-action="dismiss"]').forEach(btn => {
+        btn.addEventListener('click', () => dismissPendingFolder(btn.dataset.id));
+      });
+    }
+
+    async function relinkPendingFolder(pendingId) {
+      const pending = pendingFolders.find(p => p.id === pendingId);
+      if (!pending) return;
+      let handle;
+      try {
+        handle = await window.showDirectoryPicker({ mode: 'read' });
+      } catch (e) {
+        if (e.name !== 'AbortError') $('#status').textContent = 'Could not open folder picker: ' + e.message;
+        return;
+      }
+      // Warn if the user picked a folder with a different name
+      if (handle.name !== pending.name) {
+        const ok = confirm(`You picked "${handle.name}" but the backup expected "${pending.name}". Use it anyway?`);
+        if (!ok) return;
+      }
+      // Avoid duplicates against active list
+      if (dsxFolderEntries.find(e => e.type === 'fsa' && e.name === handle.name)) {
+        $('#status').textContent = `Folder "${handle.name}" is already in the active list.`;
+        pendingFolders = pendingFolders.filter(p => p.id !== pendingId);
+        renderPendingFolders();
+        return;
+      }
+      const entry = { id: pending.id, name: handle.name, type: 'fsa', handle, legacyFiles: null, fileCount: null, status: 'ready' };
+      dsxFolderEntries.push(entry);
+      await idbPut({ id: entry.id, name: entry.name, handle });
+      pendingFolders = pendingFolders.filter(p => p.id !== pendingId);
+      renderFolderList();
+      renderPendingFolders();
+      countDsxFilesForEntry(entry);
+      $('#status').textContent = `Re-linked "${entry.name}".`;
+    }
+
+    function dismissPendingFolder(pendingId) {
+      pendingFolders = pendingFolders.filter(p => p.id !== pendingId);
+      renderPendingFolders();
+    }
+
+    function wireBackupRestoreButtons() {
+      const exportBtn = document.getElementById('exportFoldersBtn');
+      const restoreBtn = document.getElementById('restoreFoldersBtn');
+      const restoreInput = document.getElementById('restoreFoldersInput');
+
+      // Hide both buttons if FSA isn't supported. Without FSA, exported backups
+      // can't be restored anyway, so the workflow doesn't apply.
+      if (!FSA_SUPPORTED) {
+        exportBtn?.classList.add('hidden');
+        restoreBtn?.classList.add('hidden');
+        return;
+      }
+
+      exportBtn?.addEventListener('click', exportFolderConfig);
+      restoreBtn?.addEventListener('click', () => restoreInput?.click());
+      restoreInput?.addEventListener('change', () => {
+        if (restoreInput.files && restoreInput.files[0]) {
+          importFolderConfig(restoreInput.files[0]);
+          restoreInput.value = ''; // reset so the same file can be re-loaded
+        }
+      });
+    }
+
+    // =========================================================
+    // Scene file panel (unchanged from v1)
+    // =========================================================
+    function updateSceneFilePanel() {
+      const input = document.getElementById('dufFile');
+      const panel = document.getElementById('sceneFilePanel');
       if (!input || !panel) return;
       const hasSelection = input.files && input.files.length > 0;
       panel.classList.toggle('selection-made', hasSelection);
       panel.classList.toggle('selection-needed', !hasSelection);
-      if (hasSelection) {
-        panel.classList.remove('selection-warning', 'selection-warning-pulse');
-        if (inputId === 'dsxFolder') rememberDsxFolderSelection();
-      }
+      if (hasSelection) panel.classList.remove('selection-warning', 'selection-warning-pulse');
     }
+
     function drawAttentionToPanel(panel) {
       if (!panel) return;
       panel.classList.remove('selection-warning-pulse');
       void panel.offsetWidth;
       panel.classList.add('selection-warning-pulse');
     }
+
     function markDsxPanelIfMissing() {
-      const dsxInput = document.getElementById('dsxFolder');
-      const dsxPanel = document.getElementById('dsxFolderPanel');
-      if (!dsxInput || !dsxPanel) return;
-      const hasDsxSelection = dsxInput.files && dsxInput.files.length > 0;
-      if (!hasDsxSelection) {
-        dsxPanel.classList.remove('selection-made');
-        dsxPanel.classList.add('selection-warning');
-        drawAttentionToPanel(dsxPanel);
+      if (dsxFolderEntries.length === 0) {
+        const panel = document.getElementById('dsxFolderPanel');
+        if (panel) { panel.classList.remove('selection-made'); panel.classList.add('selection-warning'); drawAttentionToPanel(panel); }
       }
     }
-    function wireSelectionPanels() {
-      [['dufFile', 'sceneFilePanel'], ['dsxFolder', 'dsxFolderPanel']].forEach(([inputId, panelId]) => {
-        const input = document.getElementById(inputId);
-        if (!input) return;
-        input.addEventListener('change', () => updateSelectionPanel(inputId, panelId));
-        updateSelectionPanel(inputId, panelId);
-      });
-    }
 
-    function isSupportedSceneFile(file) {
-      if (!file || !file.name) return false;
-      const name = file.name.toLowerCase();
-      return name.endsWith('.duf') || name.endsWith('.duf.gz') || name.endsWith('.gz');
-    }
+    function isSupportedSceneFile(file) { if (!file || !file.name) return false; const name = file.name.toLowerCase(); return name.endsWith('.duf') || name.endsWith('.duf.gz') || name.endsWith('.gz'); }
 
     function setSceneFileFromDrop(file) {
       const input = document.getElementById('dufFile');
       if (!input || !file) return;
-      if (!isSupportedSceneFile(file)) {
-        $('#status').textContent = 'Please drop a .duf or .duf.gz scene file.';
-        return;
-      }
+      if (!isSupportedSceneFile(file)) { $('#status').textContent = 'Please drop a .duf or .duf.gz scene file.'; return; }
       const transfer = new DataTransfer();
       transfer.items.add(file);
       input.files = transfer.files;
-      updateSelectionPanel('dufFile', 'sceneFilePanel');
+      updateSceneFilePanel();
       $('#status').textContent = `Scene file selected: ${file.name}`;
     }
 
@@ -833,122 +1217,113 @@
       const panel = document.getElementById('sceneFilePanel');
       const input = document.getElementById('dufFile');
       if (!panel || !input) return;
+      panel.addEventListener('click', event => { if (event.target === input) return; input.click(); });
+      ['dragenter', 'dragover'].forEach(ev => panel.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); panel.classList.add('scene-drop-active'); }));
+      ['dragleave', 'dragend'].forEach(ev => panel.addEventListener(ev, e => { e.preventDefault(); e.stopPropagation(); if (!panel.contains(e.relatedTarget)) panel.classList.remove('scene-drop-active'); }));
+      panel.addEventListener('drop', event => { event.preventDefault(); event.stopPropagation(); panel.classList.remove('scene-drop-active'); setSceneFileFromDrop(event.dataTransfer?.files?.[0]); });
+    }
 
-      panel.addEventListener('click', event => {
-        if (event.target === input) return;
-        input.click();
-      });
+    // =========================================================
+    // Add folder button wiring
+    // =========================================================
+    function wireAddFolderButton() {
+      const btn = document.getElementById('addFolderBtn');
+      const fallbackInput = document.getElementById('dsxFolderFallback');
+      if (!btn) return;
 
-      ['dragenter', 'dragover'].forEach(eventName => {
-        panel.addEventListener(eventName, event => {
-          event.preventDefault();
-          event.stopPropagation();
-          panel.classList.add('scene-drop-active');
+      if (FSA_SUPPORTED) {
+        btn.addEventListener('click', () => addFsaFolder());
+      } else {
+        // Fallback: trigger hidden webkitdirectory input
+        btn.addEventListener('click', () => fallbackInput?.click());
+        fallbackInput?.addEventListener('change', () => {
+          if (fallbackInput.files && fallbackInput.files.length) {
+            addLegacyFolder(fallbackInput.files);
+            fallbackInput.value = ''; // reset so same folder can be re-added
+          }
         });
-      });
-
-      ['dragleave', 'dragend'].forEach(eventName => {
-        panel.addEventListener(eventName, event => {
-          event.preventDefault();
-          event.stopPropagation();
-          if (!panel.contains(event.relatedTarget)) panel.classList.remove('scene-drop-active');
-        });
-      });
-
-      panel.addEventListener('drop', event => {
-        event.preventDefault();
-        event.stopPropagation();
-        panel.classList.remove('scene-drop-active');
-        const file = event.dataTransfer?.files?.[0];
-        setSceneFileFromDrop(file);
-      });
-    }
-
-    $('#runBtn').addEventListener('click', async () => { try { const file = $('#dufFile').files[0]; if (!file) { $('#status').textContent = 'Please select a .duf scene file first.'; return } markDsxPanelIfMissing(); $('#runBtn').disabled = true; $('#status').textContent = 'Reading scene file...'; const text = await readSceneText(file); let json = {}; try { json = JSON.parse(text) } catch { } const allAssetPaths = extractQuotedPaths(text); const ignoredInactivePaths = extractInactiveModifierPaths(json); const assetPaths = filterInactiveModifierPaths(allAssetPaths, ignoredInactivePaths); const products = extractLikelyProducts(assetPaths); const sceneNodeLabels = extractSceneNodeLabels(json); const dsxStatus = await matchDsxFiles(assetPaths, $('#dsxFolder').files || []); currentResult = { inputFile: file.name, assetPaths, products, sceneNodeLabels, dsxStatus, ignoredInactivePaths }; $('#report').innerHTML = buildReport(currentResult); $('#report').classList.remove('hidden'); $('#status').textContent = 'Report generated.'; wireReport(); } catch (err) { $('#status').textContent = 'Error: ' + err.message; } finally { $('#runBtn').disabled = false; } });
-    $('#clearBtn').addEventListener('click', () => { $('#dufFile').value = ''; $('#dsxFolder').value = ''; $('#report').innerHTML = ''; $('#report').classList.add('hidden'); $('#status').textContent = 'Ready.'; currentResult = null; document.getElementById('dsxFolderPanel')?.classList.remove('selection-warning', 'selection-warning-pulse'); wireSelectionPanels(); loadRememberedDsxFolderHint(); });
-
-    function getCellSortValue(row, index) {
-      const cell = row.children[index];
-      return cell ? cell.textContent.trim() : '';
-    }
-    function compareSortValues(a, b) {
-      const an = Number(a.replace(/,/g, ''));
-      const bn = Number(b.replace(/,/g, ''));
-      const aIsNum = a !== '' && !Number.isNaN(an);
-      const bIsNum = b !== '' && !Number.isNaN(bn);
-      if (aIsNum && bIsNum) return an - bn;
-      return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
-    }
-    function getSortableRowGroups(tbody) {
-      const rows = Array.from(tbody.children);
-      const groups = [];
-      for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        if (row.classList.contains('asset-detail-row')) continue;
-        const group = [row];
-        if (rows[i + 1]?.classList.contains('asset-detail-row')) group.push(rows[i + 1]);
-        groups.push(group);
       }
-      return groups;
     }
-    function sortTable(table, columnIndex, direction) {
-      const tbody = table.tBodies[0];
-      if (!tbody) return;
-      const groups = getSortableRowGroups(tbody);
-      groups.sort((a, b) => compareSortValues(getCellSortValue(a[0], columnIndex), getCellSortValue(b[0], columnIndex)) * direction);
-      groups.flat().forEach(row => tbody.appendChild(row));
-    }
-    function wireTableSorting() {
-      document.querySelectorAll('table.sortable-table').forEach(table => {
-        table.querySelectorAll('thead th').forEach((th, index) => {
-          if (th.textContent.trim().toLowerCase() === 'matched assets') return;
-          th.classList.add('sortable');
-          th.setAttribute('title', 'Click to sort');
-          th.addEventListener('click', () => {
-            const current = th.classList.contains('sort-asc') ? 'asc' : th.classList.contains('sort-desc') ? 'desc' : '';
-            const next = current === 'asc' ? 'desc' : 'asc';
-            table.querySelectorAll('th').forEach(h => h.classList.remove('sort-asc', 'sort-desc'));
-            th.classList.add(next === 'asc' ? 'sort-asc' : 'sort-desc');
-            sortTable(table, index, next === 'asc' ? 1 : -1);
-          });
-        });
-      });
-    }
+
+    // =========================================================
+    // Run & Clear
+    // =========================================================
+    let currentResult = null;
+
+    $('#runBtn').addEventListener('click', async () => {
+      try {
+        const file = $('#dufFile').files[0];
+        if (!file) { $('#status').textContent = 'Please select a .duf scene file first.'; return; }
+        markDsxPanelIfMissing();
+        $('#runBtn').disabled = true;
+        $('#status').textContent = 'Reading scene file...';
+        const text = await readSceneText(file);
+        let json = {}; try { json = JSON.parse(text) } catch { }
+        const allAssetPaths = extractQuotedPaths(text);
+        const ignoredInactivePaths = extractInactiveModifierPaths(json);
+        const assetPaths = filterInactiveModifierPaths(allAssetPaths, ignoredInactivePaths);
+        const products = extractLikelyProducts(assetPaths);
+        const sceneNodeLabels = extractSceneNodeLabels(json);
+        $('#status').textContent = 'Collecting DSX files from folders...';
+        const allDsxFiles = await getAllDsxFiles();
+        const dsxStatus = await matchDsxFiles(assetPaths, allDsxFiles);
+        currentResult = { inputFile: file.name, assetPaths, products, sceneNodeLabels, dsxStatus, ignoredInactivePaths };
+        $('#report').innerHTML = buildReport(currentResult);
+        $('#report').classList.remove('hidden');
+        $('#status').textContent = 'Report generated.';
+        wireReport();
+      } catch (err) {
+        $('#status').textContent = 'Error: ' + err.message;
+      } finally {
+        $('#runBtn').disabled = false;
+      }
+    });
+
+    $('#clearBtn').addEventListener('click', () => {
+      $('#dufFile').value = '';
+      $('#report').innerHTML = '';
+      $('#report').classList.add('hidden');
+      $('#status').textContent = 'Ready.';
+      currentResult = null;
+      updateSceneFilePanel();
+      // DSX folders and pending re-links are intentionally NOT cleared here
+    });
+
+    // =========================================================
+    // Table sorting & filtering (unchanged from v1)
+    // =========================================================
+    function getCellSortValue(row, index) { const cell = row.children[index]; return cell ? cell.textContent.trim() : ''; }
+    function compareSortValues(a, b) { const an = Number(a.replace(/,/g, '')); const bn = Number(b.replace(/,/g, '')); const aIsNum = a !== '' && !Number.isNaN(an); const bIsNum = b !== '' && !Number.isNaN(bn); if (aIsNum && bIsNum) return an - bn; return a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' }); }
+    function getSortableRowGroups(tbody) { const rows = Array.from(tbody.children); const groups = []; for (let i = 0; i < rows.length; i++) { const row = rows[i]; if (row.classList.contains('asset-detail-row')) continue; const group = [row]; if (rows[i + 1]?.classList.contains('asset-detail-row')) group.push(rows[i + 1]); groups.push(group); } return groups; }
+    function sortTable(table, columnIndex, direction) { const tbody = table.tBodies[0]; if (!tbody) return; const groups = getSortableRowGroups(tbody); groups.sort((a, b) => compareSortValues(getCellSortValue(a[0], columnIndex), getCellSortValue(b[0], columnIndex)) * direction); groups.flat().forEach(row => tbody.appendChild(row)); }
+    function wireTableSorting() { document.querySelectorAll('table.sortable-table').forEach(table => { table.querySelectorAll('thead th').forEach((th, index) => { if (th.textContent.trim().toLowerCase() === 'matched assets') return; th.classList.add('sortable'); th.setAttribute('title', 'Click to sort'); th.addEventListener('click', () => { const current = th.classList.contains('sort-asc') ? 'asc' : th.classList.contains('sort-desc') ? 'desc' : ''; const next = current === 'asc' ? 'desc' : 'asc'; table.querySelectorAll('th').forEach(h => h.classList.remove('sort-asc', 'sort-desc')); th.classList.add(next === 'asc' ? 'sort-asc' : 'sort-desc'); sortTable(table, index, next === 'asc' ? 1 : -1); }); }); }); }
 
     function buildStandaloneReportHtml() {
-      const reportScripts = `<script>
-        document.addEventListener('DOMContentLoaded', function () {
-          document.querySelectorAll('.asset-toggle-btn').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-              const row = document.getElementById(btn.dataset.target);
-              if (!row) return;
-              const open = !row.classList.contains('is-open');
-              row.classList.toggle('is-open', open);
-              btn.setAttribute('aria-expanded', String(open));
-            });
-          });
-          document.querySelectorAll('.filter').forEach(function (input) {
-            input.addEventListener('input', function () {
-              const table = document.getElementById(input.dataset.table);
-              if (!table) return;
-              const q = input.value.toLowerCase();
-              table.querySelectorAll('tbody tr').forEach(function (row) {
-                if (row.classList.contains('asset-detail-row')) return;
-                row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
-              });
-            });
-          });
-        });
-      <\/script>`;
+      const reportScripts = `<script>document.addEventListener('DOMContentLoaded',function(){document.querySelectorAll('.asset-toggle-btn').forEach(function(btn){btn.addEventListener('click',function(){var row=document.getElementById(btn.dataset.target);if(!row)return;var open=!row.classList.contains('is-open');row.classList.toggle('is-open',open);btn.setAttribute('aria-expanded',String(open));});});document.querySelectorAll('.filter').forEach(function(input){input.addEventListener('input',function(){var table=document.getElementById(input.dataset.table);if(!table)return;var q=input.value.toLowerCase();table.querySelectorAll('tbody tr').forEach(function(row){if(row.classList.contains('asset-detail-row'))return;row.style.display=row.textContent.toLowerCase().includes(q)?'':'none';});});});});<\/script>`;
       return '<!doctype html>\n<html><head><meta charset="utf-8"><title>DAZ Scene Asset Report</title>' + document.querySelector('style').outerHTML + '</head><body data-theme="' + document.body.dataset.theme + '"><main>' + $('#report').innerHTML + '</main>' + reportScripts + '</body></html>';
     }
 
-    function wireReport() { wireTableSorting(); document.querySelectorAll('.asset-toggle-btn').forEach(btn => btn.addEventListener('click', () => { const row = document.getElementById(btn.dataset.target); const open = !row.classList.contains('is-open'); row.classList.toggle('is-open', open); btn.setAttribute('aria-expanded', String(open)); })); document.querySelectorAll('.filter').forEach(input => input.addEventListener('input', () => { const table = document.getElementById(input.dataset.table); const q = input.value.toLowerCase(); table.querySelectorAll('tbody tr').forEach(row => { if (row.classList.contains('asset-detail-row')) return; row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none'; }); })); $('#downloadTitles')?.addEventListener('click', () => { const baseName = getSceneDownloadBaseName(currentResult); download(`${baseName}-product-titles.txt`, makeTextTitles(currentResult)); }); $('#downloadHtml')?.addEventListener('click', () => { const baseName = getSceneDownloadBaseName(currentResult); download(`${baseName}-asset-report.html`, buildStandaloneReportHtml(), 'text/html'); }); }
-    initialiseThemeToggle();
-    wireSelectionPanels();
-    wireSceneFileDropZone();
-    loadRememberedDsxFolderHint();
-  </script>
-</body>
+    function wireReport() {
+      wireTableSorting();
+      document.querySelectorAll('.asset-toggle-btn').forEach(btn => btn.addEventListener('click', () => { const row = document.getElementById(btn.dataset.target); const open = !row.classList.contains('is-open'); row.classList.toggle('is-open', open); btn.setAttribute('aria-expanded', String(open)); }));
+      document.querySelectorAll('.filter').forEach(input => input.addEventListener('input', () => { const table = document.getElementById(input.dataset.table); const q = input.value.toLowerCase(); table.querySelectorAll('tbody tr').forEach(row => { if (row.classList.contains('asset-detail-row')) return; row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none'; }); }));
+      $('#downloadTitles')?.addEventListener('click', () => { const baseName = getSceneDownloadBaseName(currentResult); download(`${baseName}-product-titles.txt`, makeTextTitles(currentResult)); });
+      $('#downloadHtml')?.addEventListener('click', () => { const baseName = getSceneDownloadBaseName(currentResult); download(`${baseName}-asset-report.html`, buildStandaloneReportHtml(), 'text/html'); });
+    }
 
-</html>
+    // =========================================================
+    // Init
+    // =========================================================
+    initialiseThemeToggle();
+    updateSceneFilePanel();
+    wireSceneFileDropZone();
+    wireAddFolderButton();
+    wireBackupRestoreButtons();
+    renderFolderList();        // show empty state initially
+    renderPendingFolders();    // hidden until a backup is loaded
+    restorePersistedFolders(); // async — populates list when IDB resolves
+  </script>
+
+
+
+</body></html>
